@@ -1,7 +1,7 @@
 {
-  "name": "fal-image-generator-pro",
-  "version": "2.0.0",
-  "description": "Professional AI Image Generation Platform with Multiple FAL.ai Models Support",
+  "name": "ai-studio",
+  "version": "3.0.0",
+  "description": "Professional Multi-Provider AI Media Generation Platform",
   "type": "module",
   "main": "app.js",
   "scripts": {

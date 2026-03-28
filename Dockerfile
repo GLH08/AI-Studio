@@ -16,6 +16,7 @@ RUN npm install --only=production && npm cache clean --force
 
 # 复制应用文件
 COPY --chown=nodejs:nodejs app.js ./
+COPY --chown=nodejs:nodejs app-frontend.js ./
 COPY --chown=nodejs:nodejs index.html ./
 COPY --chown=nodejs:nodejs login.html ./
 

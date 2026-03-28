@@ -1,17 +1,11 @@
 services:
-  fal-image-gen:
+  ai-studio:
     image: ghcr.io/glh08/fal-image:latest
-    container_name: fal-image-generator-pro
+    container_name: ai-studio
     ports:
       - "8787:8787"
-    environment:
-      - FAL_KEY=${FAL_KEY}
-      - PORT=8787
-      - LSKY_URL=${LSKY_URL:-}
-      - LSKY_TOKEN=${LSKY_TOKEN:-}
-      - LSKY_STRATEGY_ID=${LSKY_STRATEGY_ID:-1}
-      - AUTH_PASSWORD=${AUTH_PASSWORD:-}
-      - RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS:-100}
+    env_file:
+      - .env
     volumes:
       - ./data:/app/data
     restart: unless-stopped

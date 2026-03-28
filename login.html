@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Fal.ai Studio</title>
+    <title>Login - AI Studio</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M15.477 0c.415 0 .749.338.788.752a7.775 7.775 0 006.985 6.984c.413.04.752.373.752.788v6.952c0 .415-.338.748-.752.788a7.775 7.775 0 00-6.985 6.984c-.04.414-.373.752-.788.752H8.525c-.416 0-.749-.338-.789-.752a7.775 7.775 0 00-6.984-6.984c-.414-.04-.752-.373-.752-.788V8.524c0-.415.338-.748.752-.788A7.775 7.775 0 007.736.752C7.776.338 8.11 0 8.526 0h6.95z' fill='%238B5CF6'/%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -27,7 +27,6 @@
     </style>
 </head>
 <body class="font-sans bg-dark-900 text-zinc-100 min-h-screen flex items-center justify-center p-4 overflow-hidden">
-    <!-- Aurora Background -->
     <div class="fixed inset-0 -z-10">
         <div class="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] bg-aurora-purple/20 rounded-full blur-[120px] animate-pulse"></div>
         <div class="absolute -bottom-1/4 -right-1/4 w-[600px] h-[600px] bg-aurora-pink/15 rounded-full blur-[100px]"></div>
@@ -35,9 +34,7 @@
     </div>
 
     <div class="w-full max-w-md">
-        <!-- Card -->
         <div class="bg-dark-800/50 backdrop-blur-xl rounded-3xl border border-white/10 p-8 shadow-2xl">
-            <!-- Logo -->
             <div class="flex justify-center mb-8">
                 <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-aurora-purple to-aurora-pink flex items-center justify-center animate-float shadow-lg shadow-aurora-purple/25">
                     <svg class="w-12 h-12 text-white" viewBox="0 0 24 24">
@@ -45,34 +42,26 @@
                     </svg>
                 </div>
             </div>
-
-            <!-- Title -->
             <div class="text-center mb-8">
                 <h1 class="font-serif text-3xl font-semibold mb-2">Welcome Back</h1>
                 <p class="text-zinc-400">Enter your password to continue</p>
             </div>
-
-            <!-- Form -->
             <form id="loginForm" class="space-y-6">
                 <div class="space-y-2">
                     <label for="password" class="text-sm text-zinc-400">Password</label>
                     <input type="password" id="password" placeholder="••••••••" required autofocus
                         class="w-full h-14 px-5 rounded-xl bg-dark-700/50 border border-white/10 text-white placeholder-zinc-600 transition-all focus:border-aurora-purple/50 focus:ring-2 focus:ring-aurora-purple/20 focus:outline-none text-lg">
                 </div>
-
                 <button type="submit" class="w-full h-14 rounded-xl bg-gradient-to-r from-aurora-purple to-aurora-pink text-white font-semibold text-lg transition-all hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-lg shadow-aurora-purple/25">
                     Sign In
                 </button>
-
                 <p id="errorMsg" class="hidden text-center text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-4">
                     Invalid password. Please try again.
                 </p>
             </form>
         </div>
-
-        <!-- Footer -->
         <p class="text-center text-zinc-600 text-sm mt-8">
-            Powered by <span class="bg-gradient-to-r from-aurora-purple to-aurora-pink bg-clip-text text-transparent font-medium">Fal.ai</span>
+            Powered by <span class="bg-gradient-to-r from-aurora-purple to-aurora-pink bg-clip-text text-transparent font-medium">AI Studio</span>
         </p>
     </div>
 
@@ -82,7 +71,6 @@
             const password = document.getElementById('password').value;
             const errorMsg = document.getElementById('errorMsg');
             errorMsg.classList.add('hidden');
-
             try {
                 const res = await fetch('/api/login', {
                     method: 'POST',

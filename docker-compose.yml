@@ -1,30 +1,13 @@
 services:
-  fal-image-gen:
+  ai-studio:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: fal-image-generator-pro
+    container_name: ai-studio
     ports:
       - "8787:8787"
-    environment:
-      # 必需配置
-      - FAL_KEY=${FAL_KEY}
-      # 可选配置
-      - PORT=8787
-      - LSKY_URL=${LSKY_URL:-}
-      - LSKY_TOKEN=${LSKY_TOKEN:-}
-      - LSKY_STRATEGY_ID=${LSKY_STRATEGY_ID:-1}
-      - AUTH_PASSWORD=${AUTH_PASSWORD:-}
-      # 高级配置
-      - MAX_REQUEST_SIZE=${MAX_REQUEST_SIZE:-50}
-      - REQUEST_TIMEOUT=${REQUEST_TIMEOUT:-120000}
-      - MAX_BULK_REQUESTS=${MAX_BULK_REQUESTS:-5}
-      # 安全配置
-      - RATE_LIMIT_ENABLED=${RATE_LIMIT_ENABLED:-true}
-      - RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS:-100}
-      # 日志配置
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      - LOG_REQUESTS=${LOG_REQUESTS:-true}
+    env_file:
+      - .env
     volumes:
       - ./data:/app/data
     user: "0:0"
@@ -35,13 +18,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.fal-app.rule=Host(`${DOMAIN:-localhost}`)"
-      - "traefik.http.services.fal-app.loadbalancer.server.port=8787"
     networks:
-      - fal-network
+      - ai-network
 
 networks:
-  fal-network:
+  ai-network:
     driver: bridge

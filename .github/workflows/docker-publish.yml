@@ -9,7 +9,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  # Use lowercase explicitly or lowercase transformation to prevent "repository name must be lowercase" error
+  IMAGE_NAME: ${{ github.repository_owner }}/fal-image
 
 jobs:
   build-and-push:

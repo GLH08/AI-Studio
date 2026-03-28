@@ -17,7 +17,6 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 8787;
-const FAL_KEY = process.env.FAL_KEY;
 const AUTH_PASSWORD = process.env.AUTH_PASSWORD;
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
@@ -27,7 +26,60 @@ if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Middleware
+// ==================== Provider Configuration ====================
+
+function parseModels(str) {
+    return (str || '').split(',').map(m => m.trim()).filter(Boolean);
+}
+
+function loadProviders() {
+    const providers = [];
+    for (let i = 1; i <= 10; i++) {
+        const name = process.env[`PROVIDER_${i}_NAME`];
+        const type = process.env[`PROVIDER_${i}_TYPE`];
+        const baseUrl = process.env[`PROVIDER_${i}_BASE_URL`];
+        const apiKey = process.env[`PROVIDER_${i}_API_KEY`];
+
+        if (!name || !type || !baseUrl || !apiKey) continue;
+
+        const validTypes = ['openai', 'openai-compatible', 'gemini', 'grok2api'];
+        if (!validTypes.includes(type)) {
+            console.warn(`⚠️ Provider ${i} has invalid type: ${type}. Skipping.`);
+            continue;
+        }
+
+        if (type === 'grok2api') {
+            const imageModels = parseModels(process.env[`PROVIDER_${i}_IMAGE_MODELS`]);
+            const imageEditModels = parseModels(process.env[`PROVIDER_${i}_IMAGE_EDIT_MODELS`]);
+            const videoModels = parseModels(process.env[`PROVIDER_${i}_VIDEO_MODELS`]);
+            const allModels = [...imageModels, ...imageEditModels, ...videoModels];
+            if (allModels.length === 0) continue;
+            providers.push({
+                id: `provider-${i}`, name, type,
+                baseUrl: baseUrl.replace(/\/$/, ''), apiKey,
+                models: allModels, imageModels, imageEditModels, videoModels
+            });
+        } else {
+            const models = parseModels(process.env[`PROVIDER_${i}_MODELS`]);
+            if (models.length === 0) continue;
+            providers.push({
+                id: `provider-${i}`, name, type,
+                baseUrl: baseUrl.replace(/\/$/, ''), apiKey,
+                models, imageModels: models, imageEditModels: [], videoModels: []
+            });
+        }
+    }
+    return providers;
+}
+
+const PROVIDERS = loadProviders();
+
+function getProvider(providerId) {
+    return PROVIDERS.find(p => p.id === providerId);
+}
+
+// ==================== Middleware ====================
+
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -38,7 +90,7 @@ app.use(helmet({
             connectSrc: ["'self'", "https:", "http:"],
             fontSrc: ["'self'", "https:", "http:"],
             objectSrc: ["'none'"],
-            mediaSrc: ["'self'"],
+            mediaSrc: ["'self'", "https:", "http:"],
             frameSrc: ["'self'"]
         }
     },
@@ -47,17 +99,15 @@ app.use(helmet({
 app.use(cors());
 app.use(compression());
 app.use(morgan('combined'));
-app.use(bodyParser.json({ limit: '50mb' })); // Increased limit for image uploads
+app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 
 // Rate Limiting
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: process.env.RATE_LIMIT_MAX_REQUESTS || 100, // Limit each IP to 100 requests per windowMs
-    message: {
-        error: 'Too many requests from this IP, please try again later.'
-    },
+    windowMs: 15 * 60 * 1000,
+    max: process.env.RATE_LIMIT_MAX_REQUESTS || 100,
+    message: { error: 'Too many requests from this IP, please try again later.' },
     standardHeaders: true,
     legacyHeaders: false,
 });
@@ -111,163 +161,14 @@ app.post('/api/login', (req, res) => {
     }
 });
 
-// Enhanced Model Configuration
-const FAL_MODEL_CONFIG = {
-    "flux-1.1-pro-ultra": {
-        submitUrl: 'https://queue.fal.run/fal-ai/flux-pro/v1.1-ultra',
-        statusBaseUrl: 'https://queue.fal.run/fal-ai/flux-pro',
-        logName: 'FLUX 1.1 Pro Ultra',
-        type: 'text-to-image',
-        supports: {
-            aspectRatios: ['21:9', '16:9', '4:3', '3:2', '1:1', '2:3', '3:4', '9:16', '9:21'],
-            resolutions: [],
-            safetyTolerance: true,
-            seed: true,
-            enhancePrompt: true,
-            raw: true,
-            imageToImage: false,
-            outputFormats: ['jpeg', 'png'],
-            customSizes: true
-        },
-        defaults: {
-            aspectRatio: '16:9',
-            safetyTolerance: '2',
-            outputFormat: 'jpeg',
-            enableSafetyChecker: true,
-            numImages: 1
-        }
-    },
-    "flux-2-pro": {
-        submitUrl: 'https://queue.fal.run/fal-ai/flux-2-pro',
-        statusBaseUrl: 'https://queue.fal.run/fal-ai/flux-2-pro',
-        logName: 'FLUX 2 Pro',
-        type: 'text-to-image',
-        supports: {
-            aspectRatios: [],
-            resolutions: [],
-            safetyTolerance: true,
-            seed: true,
-            enhancePrompt: false,
-            raw: false,
-            imageToImage: false,
-            outputFormats: ['jpeg', 'png'],
-            customSizes: true,
-            imageSize: true
-        },
-        defaults: {
-            imageSize: 'landscape_4_3',
-            safetyTolerance: '2',
-            outputFormat: 'jpeg',
-            enableSafetyChecker: true,
-            numImages: 1
-        }
-    },
-    "imagen4-preview": {
-        submitUrl: 'https://queue.fal.run/fal-ai/imagen4/preview',
-        statusBaseUrl: 'https://queue.fal.run/fal-ai/imagen4',
-        logName: 'Google Imagen 4 Preview',
-        type: 'text-to-image',
-        supports: {
-            aspectRatios: ['1:1', '16:9', '9:16', '4:3', '3:4'],
-            resolutions: ['1K', '2K'],
-            safetyTolerance: false,
-            seed: false,
-            enhancePrompt: false,
-            raw: false,
-            imageToImage: false,
-            outputFormats: ['jpeg', 'png', 'webp'],
-            customSizes: false
-        },
-        defaults: {
-            aspectRatio: '1:1',
-            resolution: '1K',
-            outputFormat: 'png',
-            numImages: 1
-        }
-    },
-    "nano-banana-pro": {
-        submitUrl: 'https://queue.fal.run/fal-ai/nano-banana-pro',
-        statusBaseUrl: 'https://queue.fal.run/fal-ai/nano-banana-pro',
-        logName: 'Gemini 3 Pro Image',
-        type: 'text-to-image',
-        supports: {
-            aspectRatios: ['21:9', '16:9', '3:2', '4:3', '5:4', '1:1', '4:5', '3:4', '2:3', '9:16'],
-            resolutions: ['1K', '2K', '4K'],
-            safetyTolerance: false,
-            seed: false,
-            enhancePrompt: false,
-            raw: false,
-            imageToImage: false,
-            outputFormats: ['jpeg', 'png', 'webp'],
-            customSizes: false
-        },
-        defaults: {
-            aspectRatio: '1:1',
-            resolution: '1K',
-            outputFormat: 'png',
-            numImages: 1
-        }
-    },
-    "nano-banana-pro-edit": {
-        submitUrl: 'https://queue.fal.run/fal-ai/nano-banana-pro/edit',
-        statusBaseUrl: 'https://queue.fal.run/fal-ai/nano-banana-pro',
-        logName: 'Gemini 3 Pro Image Edit',
-        type: 'image-to-image',
-        supports: {
-            aspectRatios: ['auto', '21:9', '16:9', '3:2', '4:3', '5:4', '1:1', '4:5', '3:4', '2:3', '9:16'],
-            resolutions: ['1K', '2K', '4K'],
-            safetyTolerance: false,
-            seed: false,
-            enhancePrompt: false,
-            raw: false,
-            imageToImage: true,
-            imageUrls: true,
-            outputFormats: ['jpeg', 'png', 'webp'],
-            customSizes: false,
-            multiImage: true
-        },
-        defaults: {
-            aspectRatio: 'auto',
-            resolution: '1K',
-            outputFormat: 'png',
-            numImages: 1
-        }
-    },
-    "flux-2-pro-edit": {
-        submitUrl: 'https://queue.fal.run/fal-ai/flux-2-pro/edit',
-        statusBaseUrl: 'https://queue.fal.run/fal-ai/flux-2-pro',
-        logName: 'FLUX 2 Pro Edit',
-        type: 'image-to-image',
-        supports: {
-            aspectRatios: ['auto'],
-            resolutions: [],
-            safetyTolerance: true,
-            seed: true,
-            enhancePrompt: false,
-            raw: false,
-            imageToImage: true,
-            outputFormats: ['jpeg', 'png'],
-            imageUrls: true,
-            customSizes: true
-        },
-        defaults: {
-            imageSize: 'auto',
-            safetyTolerance: '2',
-            outputFormat: 'jpeg',
-            enableSafetyChecker: true,
-            numImages: 1
-        }
-    }
-};
+// ==================== Database Helpers ====================
 
-// Database Helpers
 function readDb() {
     if (!fs.existsSync(DB_FILE)) {
         return { images: [], videos: [], statistics: { total: 0, byModel: {}, videoTotal: 0, videoByModel: {} } };
     }
     try {
         const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-        // Ensure videos array exists for backward compatibility
         if (!data.videos) data.videos = [];
         if (!data.statistics.videoTotal) data.statistics.videoTotal = 0;
         if (!data.statistics.videoByModel) data.statistics.videoByModel = {};
@@ -284,14 +185,10 @@ function writeDb(data) {
 function addImageToDb(image) {
     try {
         const db = readDb();
-
-        // Ensure statistics object exists
         if (!db.statistics) {
-            console.log('Initializing missing statistics object');
             db.statistics = { total: 0, byModel: {} };
         }
         if (!db.statistics.byModel) {
-            console.log('Initializing missing byModel object');
             db.statistics.byModel = {};
         }
 
@@ -302,633 +199,9 @@ function addImageToDb(image) {
         console.log(`✅ Image saved to database: ${image.model} (Total: ${db.statistics.total})`);
     } catch (error) {
         console.error('❌ Failed to save image to database:', error);
-        // Don't throw the error - we don't want to fail the entire request
-        // if database save fails
     }
 }
 
-// Utility Functions
-function validateModelParameters(model, params) {
-    const config = FAL_MODEL_CONFIG[model];
-    if (!config) {
-        return { valid: false, error: `Unsupported model: ${model}` };
-    }
-
-    const errors = [];
-
-    // Validate aspect ratio
-    if (params.aspectRatio) {
-        // FLUX 2 Pro uses image_size parameter instead of aspect_ratio
-        if (model === 'flux-2-pro' || model === 'flux-2-pro-edit') {
-            // These models use image_size mapping, so we don't validate aspectRatio here
-            // The mapping happens in constructFalPayload
-            const validRatios = ['1:1', '16:9', '9:16', '4:3', '3:2'];
-            if (!validRatios.includes(params.aspectRatio)) {
-                errors.push(`Invalid aspect ratio "${params.aspectRatio}" for ${model}. Supported: ${validRatios.join(', ')}`);
-            }
-        } else if (config.supports.aspectRatios.length > 0) {
-            if (!config.supports.aspectRatios.includes(params.aspectRatio)) {
-                errors.push(`Invalid aspect ratio "${params.aspectRatio}" for ${model}. Supported: ${config.supports.aspectRatios.join(', ')}`);
-            }
-        }
-    }
-
-    // Validate resolution
-    if (params.resolution) {
-        if (!config.supports.resolutions.includes(params.resolution)) {
-            errors.push(`Invalid resolution "${params.resolution}" for ${model}. Supported: ${config.supports.resolutions.join(', ')}`);
-        }
-    }
-
-    // Validate output format
-    if (params.outputFormat) {
-        if (!config.supports.outputFormats.includes(params.outputFormat)) {
-            errors.push(`Invalid output format "${params.outputFormat}" for ${model}. Supported: ${config.supports.outputFormats.join(', ')}`);
-        }
-    }
-
-    // Validate safety tolerance
-    if (params.safety_tolerance && !config.supports.safetyTolerance) {
-        errors.push(`Model ${model} does not support safety_tolerance parameter`);
-    }
-
-    // Validate seed
-    if (params.seed && !config.supports.seed) {
-        errors.push(`Model ${model} does not support seed parameter`);
-    }
-
-    // Validate image URLs for image-to-image models
-    if (config.type === 'image-to-image') {
-        if (!params.imageUrls && !params.image_url) {
-            errors.push(`Model ${model} requires image URLs`);
-        }
-
-        // Validate multi-image support
-        if (params.imageUrls && params.imageUrls.length > 1 && !config.supports.multiImage) {
-            errors.push(`Model ${model} does not support multiple input images`);
-        }
-    }
-
-    return { valid: errors.length === 0, errors };
-}
-
-function constructFalPayload(model, params) {
-    const config = FAL_MODEL_CONFIG[model];
-    const payload = {
-        prompt: params.prompt,
-        num_images: params.num_images || config.defaults.numImages,
-    };
-
-    // Add model-specific parameters
-    if (config.type === 'image-to-image') {
-        // Both FLUX 2 Pro Edit and nano-banana-pro/edit require image_urls (array format)
-        if (params.imageUrls && params.imageUrls.length > 0) {
-            payload.image_urls = params.imageUrls;
-        } else if (params.image_url) {
-            // Convert single image_url to image_urls array format
-            payload.image_urls = [params.image_url];
-        }
-
-        // FLUX 2 Pro Edit uses image_size
-        if (model === 'flux-2-pro-edit') {
-            if (params.aspectRatio) {
-                const aspectRatioMap = {
-                    '1:1': 'square',
-                    '16:9': 'landscape_16_9',
-                    '9:16': 'portrait_16_9',
-                    '4:3': 'landscape_4_3',
-                    '3:2': 'portrait_4_3',
-                    'auto': 'auto'
-                };
-                payload.image_size = aspectRatioMap[params.aspectRatio] || 'auto';
-            } else {
-                payload.image_size = 'auto';
-            }
-        } else if (config.supports.customSizes && params.imageSize) {
-            payload.image_size = params.imageSize;
-        } else if (params.aspectRatio) {
-            payload.aspect_ratio = params.aspectRatio;
-        }
-
-        if (params.imagePromptStrength) {
-            payload.image_prompt_strength = params.imagePromptStrength;
-        }
-
-        // nano-banana-pro-edit supports resolution parameter
-        if (model === 'nano-banana-pro-edit' && params.resolution && config.supports.resolutions.length > 0) {
-            payload.resolution = params.resolution;
-        }
-    } else {
-        // Text-to-image models
-        if (model === 'flux-2-pro') {
-            // FLUX 2 Pro uses image_size instead of aspect_ratio
-            if (params.aspectRatio) {
-                const aspectRatioMap = {
-                    '1:1': 'square',
-                    '16:9': 'landscape_16_9',
-                    '9:16': 'portrait_16_9',
-                    '4:3': 'landscape_4_3',
-                    '3:2': 'portrait_4_3'
-                };
-                payload.image_size = aspectRatioMap[params.aspectRatio] || 'landscape_4_3';
-            }
-        } else if (params.aspectRatio) {
-            payload.aspect_ratio = params.aspectRatio;
-        }
-
-        if (params.resolution && config.supports.resolutions.length > 0) {
-            payload.resolution = params.resolution;
-        }
-    }
-
-    // Add optional parameters if supported
-    if (config.supports.safetyTolerance && params.safety_tolerance) {
-        payload.safety_tolerance = params.safety_tolerance;
-    }
-
-    if (config.supports.seed && params.seed) {
-        payload.seed = params.seed;
-    }
-
-    if (config.supports.enhancePrompt && params.enhancePrompt !== undefined) {
-        payload.enhance_prompt = params.enhancePrompt;
-    }
-
-    if (config.supports.raw && params.raw !== undefined) {
-        payload.raw = params.raw;
-    }
-
-    if (params.outputFormat) {
-        payload.output_format = params.outputFormat;
-    }
-
-    if (params.enableSafetyChecker !== undefined) {
-        payload.enable_safety_checker = params.enableSafetyChecker;
-    }
-
-    if (params.syncMode !== undefined) {
-        payload.sync_mode = params.syncMode;
-    }
-
-    return payload;
-}
-
-// API Routes
-
-// Health Check Endpoint
-app.get('/health', (req, res) => {
-    res.json({
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        version: '2.0.0',
-        models: Object.keys(FAL_MODEL_CONFIG).length
-    });
-});
-
-// Get available models
-app.get('/api/models', (req, res) => {
-    const models = Object.entries(FAL_MODEL_CONFIG).map(([id, config]) => ({
-        id,
-        name: config.logName,
-        type: config.type,
-        supports: config.supports,
-        defaults: config.defaults
-    }));
-    res.json(models);
-});
-
-// Generate Image Endpoint - Async mode to avoid Cloudflare timeout
-app.post('/api/generate', async (req, res) => {
-    if (!FAL_KEY) {
-        return res.status(500).json({ error: "Server missing FAL_KEY configuration." });
-    }
-
-    const {
-        model,
-        prompt,
-        aspectRatio,
-        resolution,
-        safety_tolerance,
-        seed,
-        outputFormat,
-        num_images,
-        image_url,
-        imageUrls,
-        enhancePrompt,
-        raw,
-        imagePromptStrength,
-        imageSize,
-        enableSafetyChecker,
-        async: asyncMode  // New: support async mode
-    } = req.body;
-
-    if (!model || !FAL_MODEL_CONFIG[model]) {
-        return res.status(400).json({ error: "Invalid or missing model." });
-    }
-    if (!prompt) {
-        return res.status(400).json({ error: "Missing prompt." });
-    }
-
-    const validation = validateModelParameters(model, {
-        aspectRatio,
-        resolution,
-        safety_tolerance,
-        seed,
-        outputFormat,
-        image_url,
-        imageUrls
-    });
-
-    if (!validation.valid) {
-        return res.status(400).json({ error: validation.errors.join(', ') });
-    }
-
-    const config = FAL_MODEL_CONFIG[model];
-    const falBody = constructFalPayload(model, {
-        prompt,
-        aspectRatio,
-        resolution,
-        safety_tolerance,
-        seed,
-        outputFormat,
-        num_images,
-        image_url,
-        imageUrls,
-        enhancePrompt,
-        raw,
-        imagePromptStrength,
-        imageSize,
-        enableSafetyChecker
-    });
-
-    try {
-        console.log(`Generating with ${config.logName}:`, JSON.stringify(falBody, null, 2));
-
-        // Submit Request
-        const submitResponse = await fetch(config.submitUrl, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Key ${FAL_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(falBody)
-        });
-
-        if (!submitResponse.ok) {
-            const text = await submitResponse.text();
-            throw new Error(`Fal.ai submission failed: ${submitResponse.status} ${text}`);
-        }
-
-        const submitResult = await submitResponse.json();
-        const requestId = submitResult.request_id;
-
-        // If async mode, return request_id immediately for client-side polling
-        if (asyncMode) {
-            return res.json({ 
-                requestId, 
-                status: 'processing',
-                model,
-                prompt,
-                aspectRatio: aspectRatio || config.defaults.aspectRatio,
-                resolution: resolution || config.defaults.resolution
-            });
-        }
-
-        // Sync mode: Poll for Result (with shorter timeout to avoid Cloudflare 524)
-        let result = null;
-        const maxAttempts = 90;  // 90 seconds max to stay under Cloudflare's 100s timeout
-        for (let i = 0; i < maxAttempts; i++) {
-            await new Promise(r => setTimeout(r, 1000));
-
-            const statusUrl = `${config.statusBaseUrl}/requests/${requestId}`;
-            const statusResponse = await fetch(statusUrl, {
-                headers: { 'Authorization': `Key ${FAL_KEY}` }
-            });
-
-            if (statusResponse.status === 200) {
-                const data = await statusResponse.json();
-                if (data.images && data.images.length > 0) {
-                    result = data.images[0];
-                    break;
-                }
-                if (data.status === 'FAILED' || data.status === 'CANCELLED') {
-                    throw new Error(`Generation ${data.status}`);
-                }
-            }
-        }
-
-        if (!result) {
-            throw new Error("Generation timed out.");
-        }
-
-        // HTTPS Fix
-        let falUrl = result.url;
-        if (falUrl && falUrl.startsWith('http://')) {
-            falUrl = falUrl.replace('http://', 'https://');
-        }
-
-        let lskyUrl = null;
-        if (process.env.LSKY_URL && process.env.LSKY_TOKEN) {
-            try {
-                lskyUrl = await uploadToLsky(falUrl);
-            } catch (e) {
-                console.error("Lsky upload failed", e);
-            }
-        }
-
-        // Save to DB
-        const imageRecord = {
-            id: requestId,
-            url: falUrl,
-            lskyUrl: lskyUrl,
-            prompt: prompt,
-            model: model,
-            aspectRatio: aspectRatio || config.defaults.aspectRatio,
-            resolution: resolution || config.defaults.resolution,
-            safety_tolerance: safety_tolerance,
-            seed: seed,
-            outputFormat: outputFormat || config.defaults.outputFormat,
-            timestamp: new Date().toISOString(),
-            hidden: false,
-            modelType: config.type
-        };
-
-        if (image_url) imageRecord.sourceImage = image_url;
-        if (imageUrls) imageRecord.sourceImages = imageUrls;
-
-        addImageToDb(imageRecord);
-
-        res.json(imageRecord);
-
-    } catch (error) {
-        console.error("Generation error:", error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Check generation status - for async polling
-app.get('/api/generate/status/:requestId', async (req, res) => {
-    if (!FAL_KEY) {
-        return res.status(500).json({ error: "Server missing FAL_KEY configuration." });
-    }
-
-    const { requestId } = req.params;
-    const { model } = req.query;
-
-    if (!requestId) {
-        return res.status(400).json({ error: "Missing requestId" });
-    }
-
-    const config = FAL_MODEL_CONFIG[model] || FAL_MODEL_CONFIG['flux-1.1-pro-ultra'];
-
-    try {
-        const statusUrl = `${config.statusBaseUrl}/requests/${requestId}`;
-        const statusResponse = await fetch(statusUrl, {
-            headers: { 'Authorization': `Key ${FAL_KEY}` }
-        });
-
-        if (statusResponse.status === 200) {
-            const data = await statusResponse.json();
-            
-            if (data.images && data.images.length > 0) {
-                // Generation complete
-                let falUrl = data.images[0].url;
-                if (falUrl && falUrl.startsWith('http://')) {
-                    falUrl = falUrl.replace('http://', 'https://');
-                }
-
-                // Try to upload to Lsky
-                let lskyUrl = null;
-                if (process.env.LSKY_URL && process.env.LSKY_TOKEN) {
-                    try {
-                        lskyUrl = await uploadToLsky(falUrl);
-                    } catch (e) {
-                        console.error("Lsky upload failed", e);
-                    }
-                }
-
-                return res.json({
-                    status: 'completed',
-                    url: falUrl,
-                    lskyUrl: lskyUrl,
-                    width: data.images[0].width,
-                    height: data.images[0].height
-                });
-            }
-            
-            if (data.status === 'FAILED' || data.status === 'CANCELLED') {
-                return res.json({ status: 'failed', error: `Generation ${data.status}` });
-            }
-
-            // Still processing
-            return res.json({ status: 'processing' });
-        }
-
-        // Request not found or other error
-        const statusData = await statusResponse.json().catch(() => ({}));
-        return res.json({ status: 'processing', detail: statusData });
-
-    } catch (error) {
-        console.error("Status check error:", error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Bulk Generate Endpoint
-app.post('/api/generate/bulk', async (req, res) => {
-    if (!FAL_KEY) {
-        return res.status(500).json({ error: "Server missing FAL_KEY configuration." });
-    }
-
-    const { requests } = req.body;
-
-    if (!Array.isArray(requests) || requests.length === 0) {
-        return res.status(400).json({ error: "Invalid or empty requests array." });
-    }
-
-    if (requests.length > 5) {
-        return res.status(400).json({ error: "Maximum 5 requests per bulk operation." });
-    }
-
-    try {
-        const results = await Promise.allSettled(
-            requests.map(async (requestParams) => {
-                const model = requestParams.model;
-                const config = FAL_MODEL_CONFIG[model];
-
-                const validation = validateModelParameters(model, requestParams);
-                if (!validation.valid) {
-                    return { success: false, error: validation.errors.join(', '), params: requestParams };
-                }
-
-                const falBody = constructFalPayload(model, requestParams);
-
-                const submitResponse = await fetch(config.submitUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Key ${FAL_KEY}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(falBody)
-                });
-
-                if (!submitResponse.ok) {
-                    const text = await submitResponse.text();
-                    throw new Error(`Fal.ai submission failed: ${submitResponse.status} ${text}`);
-                }
-
-                const submitResult = await submitResponse.json();
-                const requestId = submitResult.request_id;
-
-                // Poll for result
-                let result = null;
-                const maxAttempts = 600;  // Increased to 600 seconds (10 minutes)
-                for (let i = 0; i < maxAttempts; i++) {
-                    await new Promise(r => setTimeout(r, 1000));
-
-                    const statusUrl = `${config.statusBaseUrl}/requests/${requestId}`;
-                    const statusResponse = await fetch(statusUrl, {
-                        headers: { 'Authorization': `Key ${FAL_KEY}` }
-                    });
-
-                    if (statusResponse.status === 200) {
-                        const data = await statusResponse.json();
-                        if (data.images && data.images.length > 0) {
-                            result = data.images[0];
-                            break;
-                        }
-                        if (data.status === 'FAILED' || data.status === 'CANCELLED') {
-                            throw new Error(`Generation ${data.status}`);
-                        }
-                    }
-                }
-
-                if (!result) {
-                    throw new Error("Generation timed out.");
-                }
-
-                let falUrl = result.url;
-                if (falUrl && falUrl.startsWith('http://')) {
-                    falUrl = falUrl.replace('http://', 'https://');
-                }
-
-                let lskyUrl = null;
-                if (process.env.LSKY_URL && process.env.LSKY_TOKEN) {
-                    try {
-                        lskyUrl = await uploadToLsky(falUrl);
-                    } catch (e) {
-                        console.error("Lsky upload failed", e);
-                    }
-                }
-
-                const imageRecord = {
-                    id: requestId,
-                    url: falUrl,
-                    lskyUrl: lskyUrl,
-                    prompt: requestParams.prompt,
-                    model: model,
-                    aspectRatio: requestParams.aspectRatio || config.defaults.aspectRatio,
-                    resolution: requestParams.resolution || config.defaults.resolution,
-                    safety_tolerance: requestParams.safety_tolerance,
-                    seed: requestParams.seed,
-                    outputFormat: requestParams.outputFormat || config.defaults.outputFormat,
-                    timestamp: new Date().toISOString(),
-                    hidden: false,
-                    modelType: config.type
-                };
-
-                addImageToDb(imageRecord);
-
-                return { success: true, result: imageRecord };
-            })
-        );
-
-        const responses = results.map(r => r.status === 'fulfilled' ? r.value : {
-            success: false,
-            error: r.reason.message
-        });
-
-        res.json({ results: responses });
-    } catch (error) {
-        console.error("Bulk generation error:", error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Gallery Endpoints
-app.get('/api/images', (req, res) => {
-    const db = readDb();
-    const visibleImages = db.images.filter(img => !img.hidden);
-    res.json(visibleImages);
-});
-
-app.get('/api/images/stats', (req, res) => {
-    const db = readDb();
-    res.json(db.statistics || { total: 0, byModel: {} });
-});
-
-// Manual Image Collection Endpoint
-app.post('/api/images/manual', (req, res) => {
-    const { url, prompt, model, aspectRatio } = req.body;
-
-    if (!url || !prompt) {
-        return res.status(400).json({ error: "URL and prompt are required." });
-    }
-
-    try {
-        new URL(url);
-    } catch (e) {
-        return res.status(400).json({ error: "Invalid URL format." });
-    }
-
-    const id = 'manual-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-
-    const imageRecord = {
-        id: id,
-        url: url,
-        lskyUrl: null,
-        prompt: prompt,
-        model: model || 'Manual',
-        aspectRatio: aspectRatio || 'Unknown',
-        resolution: null,
-        safety_tolerance: null,
-        timestamp: new Date().toISOString(),
-        hidden: false,
-        source: 'manual'
-    };
-
-    addImageToDb(imageRecord);
-    res.json(imageRecord);
-});
-
-app.delete('/api/images/:id', (req, res) => {
-    const { id } = req.params;
-    const db = readDb();
-    const initialLength = db.images.length;
-    db.images = db.images.filter(img => img.id !== id);
-    if (db.images.length === initialLength) {
-        return res.status(404).json({ error: "Image not found" });
-    }
-    writeDb(db);
-    res.json({ success: true });
-});
-
-app.patch('/api/images/:id/hide', (req, res) => {
-    const { id } = req.params;
-    const db = readDb();
-    const image = db.images.find(img => img.id === id);
-    if (!image) {
-        return res.status(404).json({ error: "Image not found" });
-    }
-    image.hidden = true;
-    writeDb(db);
-    res.json({ success: true });
-});
-
-// ==================== Video Collection Endpoints ====================
-
-// Helper function to add video to database
 function addVideoToDb(video) {
     try {
         const db = readDb();
@@ -946,153 +219,385 @@ function addVideoToDb(video) {
     }
 }
 
-// Get all videos
-app.get('/api/videos', (req, res) => {
-    const db = readDb();
-    const visibleVideos = (db.videos || []).filter(v => !v.hidden);
-    res.json(visibleVideos);
-});
+// ==================== API Adapters ====================
 
-// Get video statistics
-app.get('/api/videos/stats', (req, res) => {
-    const db = readDb();
-    res.json({
-        videoTotal: db.statistics.videoTotal || 0,
-        videoByModel: db.statistics.videoByModel || {}
+/**
+ * Standard OpenAI Images API
+ * POST /v1/images/generations
+ */
+async function callOpenAI(provider, params) {
+    const url = `${provider.baseUrl}/images/generations`;
+    const body = {
+        model: params.model,
+        prompt: params.prompt,
+        n: params.n || 1,
+    };
+
+    if (params.size) body.size = params.size;
+    if (params.quality) body.quality = params.quality;
+    if (params.style) body.style = params.style;
+    if (params.response_format) body.response_format = params.response_format;
+
+    console.log(`[OpenAI] Calling ${url} with model ${params.model}`);
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${provider.apiKey}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
     });
-});
 
-// Add text-to-video (文生视频)
-app.post('/api/videos/text-to-video', (req, res) => {
-    const { url, prompt, model, aspectRatio } = req.body;
-
-    if (!url || !prompt) {
-        return res.status(400).json({ error: "Video URL and prompt are required." });
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`OpenAI API error ${response.status}: ${text}`);
     }
 
-    try {
-        new URL(url);
-    } catch (e) {
-        return res.status(400).json({ error: "Invalid video URL format." });
+    const result = await response.json();
+
+    if (!result.data || result.data.length === 0) {
+        throw new Error('OpenAI returned no images');
     }
 
-    const id = 'video-t2v-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    const images = result.data.map(item => {
+        if (item.url) return item.url;
+        if (item.b64_json) return `data:image/png;base64,${item.b64_json}`;
+        return null;
+    }).filter(Boolean);
 
-    const videoRecord = {
-        id: id,
-        url: url,
-        prompt: prompt,
-        model: model || 'Unknown',
-        aspectRatio: aspectRatio || 'Unknown',
-        type: 'text-to-video',
-        timestamp: new Date().toISOString(),
-        hidden: false,
-        source: 'manual'
+    if (images.length === 0) {
+        throw new Error('No valid image URLs in OpenAI response');
+    }
+
+    return { url: images[0], allUrls: images };
+}
+
+/**
+ * OpenAI-Compatible (Reverse Proxy) via Chat Completions
+ * POST /v1/chat/completions
+ * Extracts image URLs from markdown in the response
+ */
+async function callOpenAICompatible(provider, params) {
+    const url = `${provider.baseUrl}/chat/completions`;
+    const body = {
+        model: params.model,
+        messages: [
+            {
+                role: 'user',
+                content: params.prompt
+            }
+        ],
+        max_tokens: 4096,
+        stream: false,
     };
 
-    addVideoToDb(videoRecord);
-    res.json(videoRecord);
-});
+    console.log(`[OpenAI-Compatible] Calling ${url} with model ${params.model}`);
 
-// Add image-to-video (图生视频)
-app.post('/api/videos/image-to-video', (req, res) => {
-    const { url, sourceImageUrl, prompt, model, aspectRatio } = req.body;
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${provider.apiKey}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+    });
 
-    if (!url || !sourceImageUrl) {
-        return res.status(400).json({ error: "Video URL and source image URL are required." });
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`OpenAI-Compatible API error ${response.status}: ${text}`);
     }
 
-    try {
-        new URL(url);
-    } catch (e) {
-        return res.status(400).json({ error: "Invalid video URL format." });
-    }
+    // Check if response is SSE streaming (text/event-stream) or JSON
+    const contentType = response.headers.get('content-type') || '';
+    let content = '';
 
-    try {
-        new URL(sourceImageUrl);
-    } catch (e) {
-        return res.status(400).json({ error: "Invalid source image URL format." });
-    }
+    if (contentType.includes('text/event-stream')) {
+        // Parse SSE streaming response
+        const text = await response.text();
+        const lines = text.split('\n');
+        let fullContent = '';
 
-    const id = 'video-i2v-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-
-    const videoRecord = {
-        id: id,
-        url: url,
-        sourceImageUrl: sourceImageUrl,
-        prompt: prompt || '',
-        model: model || 'Unknown',
-        aspectRatio: aspectRatio || 'Unknown',
-        type: 'image-to-video',
-        timestamp: new Date().toISOString(),
-        hidden: false,
-        source: 'manual'
-    };
-
-    addVideoToDb(videoRecord);
-    res.json(videoRecord);
-});
-
-// Delete video
-app.delete('/api/videos/:id', (req, res) => {
-    const { id } = req.params;
-    const db = readDb();
-    if (!db.videos) {
-        return res.status(404).json({ error: "Video not found" });
-    }
-    const initialLength = db.videos.length;
-    db.videos = db.videos.filter(v => v.id !== id);
-    if (db.videos.length === initialLength) {
-        return res.status(404).json({ error: "Video not found" });
-    }
-    writeDb(db);
-    res.json({ success: true });
-});
-
-// Hide video
-app.patch('/api/videos/:id/hide', (req, res) => {
-    const { id } = req.params;
-    const db = readDb();
-    if (!db.videos) {
-        return res.status(404).json({ error: "Video not found" });
-    }
-    const video = db.videos.find(v => v.id === id);
-    if (!video) {
-        return res.status(404).json({ error: "Video not found" });
-    }
-    video.hidden = true;
-    writeDb(db);
-    res.json({ success: true });
-});
-
-// ==================== End Video Collection Endpoints ====================
-
-// Image Upload Endpoint for Editing
-app.post('/api/upload', async (req, res) => {
-    try {
-        const { imageData } = req.body;
-
-        if (!imageData) {
-            return res.status(400).json({ error: "No image data provided" });
+        for (const line of lines) {
+            if (line.startsWith('data: ')) {
+                const data = line.slice(6).trim();
+                if (data === '[DONE]') break;
+                try {
+                    const parsed = JSON.parse(data);
+                    const delta = parsed.choices?.[0]?.delta?.content ||
+                                  parsed.choices?.[0]?.message?.content || '';
+                    fullContent += delta;
+                } catch (e) {
+                    // Skip unparseable lines
+                }
+            }
         }
-
-        // Convert base64 to buffer
-        const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
-        const buffer = Buffer.from(base64Data, 'base64');
-
-        // In a real implementation, you would upload to a storage service
-        // For now, we'll just return a mock URL
-        const filename = `upload-${Date.now()}.png`;
-        const mockUrl = `data:image/png;base64,${base64Data}`;
-
-        res.json({ url: mockUrl, filename });
-    } catch (error) {
-        console.error("Upload error:", error);
-        res.status(500).json({ error: error.message });
+        content = fullContent;
+    } else {
+        // Standard JSON response
+        const result = await response.json();
+        content = result.choices?.[0]?.message?.content || '';
     }
-});
 
-// Lsky Upload Helper
+    if (!content) {
+        throw new Error('No content in chat completion response');
+    }
+
+    console.log(`[OpenAI-Compatible] Response content length: ${content.length}`);
+
+    // Extract image URLs from markdown: ![...](url) or direct URLs
+    const markdownRegex = /!\[.*?\]\((https?:\/\/[^\s)]+)\)/g;
+    const urlRegex = /(https?:\/\/[^\s"'<>]+\.(?:png|jpg|jpeg|gif|webp|bmp|svg)(?:\?[^\s"'<>]*)?)/gi;
+
+    const images = [];
+    let match;
+
+    // First try markdown image syntax
+    while ((match = markdownRegex.exec(content)) !== null) {
+        images.push(match[1]);
+    }
+
+    // If no markdown images found, try direct URLs with image extensions
+    if (images.length === 0) {
+        while ((match = urlRegex.exec(content)) !== null) {
+            images.push(match[0]);
+        }
+    }
+
+    if (images.length === 0) {
+        throw new Error('No image URLs found in chat response. Raw content: ' + content.substring(0, 500));
+    }
+
+    return { url: images[0], allUrls: images, rawContent: content };
+}
+
+/**
+ * Google Gemini API
+ * POST /models/{model}:generateContent
+ */
+async function callGemini(provider, params) {
+    const url = `${provider.baseUrl}/models/${params.model}:generateContent?key=${provider.apiKey}`;
+    const body = {
+        contents: [
+            {
+                parts: [
+                    { text: params.prompt }
+                ]
+            }
+        ],
+        generationConfig: {
+            responseModalities: ["TEXT", "IMAGE"]
+        }
+    };
+
+    console.log(`[Gemini] Calling ${url}`);
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Gemini API error ${response.status}: ${text}`);
+    }
+
+    const result = await response.json();
+
+    // Extract images from Gemini response
+    const candidates = result.candidates;
+    if (!candidates || candidates.length === 0) {
+        throw new Error('No candidates in Gemini response');
+    }
+
+    const parts = candidates[0].content?.parts;
+    if (!parts || parts.length === 0) {
+        throw new Error('No parts in Gemini response');
+    }
+
+    const images = [];
+    let textContent = '';
+
+    for (const part of parts) {
+        if (part.inlineData) {
+            // Base64 image data
+            const mimeType = part.inlineData.mimeType || 'image/png';
+            images.push(`data:${mimeType};base64,${part.inlineData.data}`);
+        }
+        if (part.text) {
+            textContent += part.text;
+            // Also try to extract URLs from text
+            const urlRegex = /(https?:\/\/[^\s"'<>]+\.(?:png|jpg|jpeg|gif|webp)(?:\?[^\s"'<>]*)?)/gi;
+            let match;
+            while ((match = urlRegex.exec(part.text)) !== null) {
+                images.push(match[0]);
+            }
+        }
+    }
+
+    if (images.length === 0) {
+        throw new Error('No images found in Gemini response. Text: ' + textContent.substring(0, 500));
+    }
+
+    return { url: images[0], allUrls: images, rawContent: textContent };
+}
+
+/**
+ * Grok2API dedicated adapter
+ * Supports: text-to-image, image-edit, text-to-video, image-to-video
+ * All via /chat/completions with image_config / video_config
+ */
+async function callGrok2API(provider, params) {
+    const url = `${provider.baseUrl}/chat/completions`;
+    const mode = params.mode || 'text-to-image';
+    const isVideo = mode === 'text-to-video' || mode === 'image-to-video';
+    const isEdit = mode === 'image-edit';
+    const hasSourceImage = params.sourceImageUrl && (isEdit || mode === 'image-to-video');
+
+    let finalSourceUrl = params.sourceImageUrl;
+    // grok2api-1 bug: it fails to upload external URLs for video generation, but works fine with base64 data URIs.
+    if (hasSourceImage && finalSourceUrl.startsWith('http')) {
+        try {
+            const imgRes = await fetch(finalSourceUrl);
+            const imgBuf = await imgRes.arrayBuffer();
+            const mimeType = imgRes.headers.get('content-type') || 'image/jpeg';
+            finalSourceUrl = `data:${mimeType};base64,${Buffer.from(imgBuf).toString('base64')}`;
+        } catch (e) {
+            console.error('[Grok2API] Failed to pre-download source image:', e.message);
+        }
+    }
+
+    // Build messages
+    let messages;
+    if (hasSourceImage) {
+        messages = [{
+            role: 'user',
+            content: [
+                { type: 'text', text: params.prompt },
+                { type: 'image_url', image_url: { url: finalSourceUrl } }
+            ]
+        }];
+    } else {
+        messages = [{ role: 'user', content: params.prompt }];
+    }
+
+    const body = { model: params.model, messages, stream: false };
+
+    // Attach config based on mode
+    if (isVideo) {
+        body.video_config = {
+            aspect_ratio: params.videoConfig?.aspect_ratio || '3:2',
+            video_length: parseInt(params.videoConfig?.video_length) || 6,
+            resolution_name: params.videoConfig?.resolution_name || '480p',
+            preset: params.videoConfig?.preset || 'custom'
+        };
+    } else {
+        body.image_config = {
+            n: parseInt(params.imageConfig?.n) || 1,
+            size: params.imageConfig?.size || '1024x1024',
+            response_format: 'url'
+        };
+    }
+
+    console.log(`[Grok2API] ${mode} → ${url} model=${params.model}`);
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${provider.apiKey}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Grok2API error ${response.status}: ${text}`);
+    }
+
+    // Parse response (handle SSE fallback)
+    const contentType = response.headers.get('content-type') || '';
+    let content = '';
+
+    if (contentType.includes('text/event-stream')) {
+        const text = await response.text();
+        for (const line of text.split('\n')) {
+            if (line.startsWith('data: ')) {
+                const data = line.slice(6).trim();
+                if (data === '[DONE]') break;
+                try {
+                    const parsed = JSON.parse(data);
+                    content += parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.message?.content || '';
+                } catch (e) { /* skip */ }
+            }
+        }
+    } else {
+        const result = await response.json();
+        content = result.choices?.[0]?.message?.content || '';
+    }
+
+    if (!content) throw new Error('No content in Grok2API response');
+
+    console.log(`[Grok2API] Response length: ${content.length}`);
+
+    // Extract media URLs
+    const markdownRegex = /!\[.*?\]\((https?:\/\/[^\s)]+)\)/g;
+    const mediaUrlRegex = /(https?:\/\/[^\s"'<>]+\.(?:png|jpg|jpeg|gif|webp|bmp|svg|mp4|webm|mov)(?:\?[^\s"'<>]*)?)/gi;
+    let urls = [];
+    let match;
+    
+    // 1. Try to find markdown images/videos
+    while ((match = markdownRegex.exec(content)) !== null) urls.push(match[1]);
+    
+    // 2. If nothing found, parse raw URLs
+    if (urls.length === 0) {
+        while ((match = mediaUrlRegex.exec(content)) !== null) urls.push(match[0]);
+    }
+
+    // 3. Deduplicate exact same URLs
+    urls = [...new Set(urls)];
+
+    if (urls.length === 0) {
+        // Grok occasionally returns an error message as the content instead of an image link.
+        const cleanMsg = content.length < 200 ? content : content.substring(0, 200) + '...';
+        throw new Error(cleanMsg);
+    }
+
+    // 4. Filter by requested media type to avoid mixed results (e.g., getting a cover image and a video for a video prompt)
+    if (isVideo) {
+        const videoUrls = urls.filter(u => /\.(mp4|webm|mov)(\?|$)/i.test(u));
+        if (videoUrls.length > 0) urls = videoUrls; // strict filter if we found true videos
+    } else {
+        const imageUrls = urls.filter(u => !/\.(mp4|webm|mov)(\?|$)/i.test(u));
+        if (imageUrls.length > 0) urls = imageUrls; // strict filter if we found true images
+    }
+
+    return { url: urls[0], allUrls: urls, rawContent: content, isVideo };
+}
+
+/**
+ * Route to the correct adapter based on provider type
+ */
+async function callProvider(provider, params) {
+    switch (provider.type) {
+    case 'openai':
+        return await callOpenAI(provider, params);
+    case 'openai-compatible':
+        return await callOpenAICompatible(provider, params);
+    case 'gemini':
+        return await callGemini(provider, params);
+    case 'grok2api':
+        return await callGrok2API(provider, params);
+    default:
+        throw new Error(`Unsupported provider type: ${provider.type}`);
+    }
+}
+
+// ==================== Lsky Pro Upload Helper ====================
+
 async function uploadToLsky(imageUrl) {
     const lskyUrl = process.env.LSKY_URL;
     const lskyToken = process.env.LSKY_TOKEN;
@@ -1100,10 +605,16 @@ async function uploadToLsky(imageUrl) {
 
     if (!lskyUrl || !lskyToken) return null;
 
+    // Skip data: URLs for Lsky upload
+    if (imageUrl.startsWith('data:')) {
+        console.log('Skipping Lsky upload for base64 data URL');
+        return null;
+    }
+
     try {
         console.log(`Downloading image from: ${imageUrl}`);
         const imageResponse = await fetch(imageUrl);
-        if (!imageResponse.ok) throw new Error(`Failed to download image from Fal.ai. Status: ${imageResponse.status}`);
+        if (!imageResponse.ok) throw new Error(`Failed to download image. Status: ${imageResponse.status}`);
 
         const arrayBuffer = await imageResponse.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
@@ -1142,28 +653,373 @@ async function uploadToLsky(imageUrl) {
     }
 }
 
+// ==================== API Routes ====================
+
+// Health Check
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        version: '3.0.0',
+        providers: PROVIDERS.length
+    });
+});
+
+// Get available providers and models
+app.get('/api/providers', (req, res) => {
+    const providers = PROVIDERS.map(p => ({
+        id: p.id,
+        name: p.name,
+        type: p.type,
+        models: p.models,
+        imageModels: p.imageModels || p.models,
+        imageEditModels: p.imageEditModels || [],
+        videoModels: p.videoModels || []
+    }));
+    res.json(providers);
+});
+
+// Generate Endpoint (image / image-edit / video)
+app.post('/api/generate', async (req, res) => {
+    const {
+        provider: providerId, model, prompt, mode,
+        size, quality, style, n,
+        sourceImageUrl, imageConfig, videoConfig
+    } = req.body;
+
+    if (!providerId) return res.status(400).json({ error: 'Missing provider.' });
+    const provider = getProvider(providerId);
+    if (!provider) return res.status(400).json({ error: `Unknown provider: ${providerId}` });
+    if (!model) return res.status(400).json({ error: 'Missing model.' });
+    if (!provider.models.includes(model)) return res.status(400).json({ error: `Model "${model}" not available.` });
+    if (!prompt) return res.status(400).json({ error: 'Missing prompt.' });
+
+    const genMode = mode || 'text-to-image';
+
+    try {
+        console.log(`[Generate] provider=${provider.name} type=${provider.type} model=${model} mode=${genMode}`);
+
+        const result = await callProvider(provider, {
+            model, prompt, mode: genMode,
+            size, quality, style, n: n || 1,
+            sourceImageUrl, imageConfig, videoConfig
+        });
+
+        const isVideoResult = result.isVideo || genMode === 'text-to-video' || genMode === 'image-to-video';
+        const allUrls = result.allUrls || [result.url];
+        const timestamp = new Date().toISOString();
+        const records = [];
+
+        for (const mediaUrl of allUrls) {
+            // Try Lsky upload (skip for videos)
+            let lskyUrl = null;
+            if (!isVideoResult && process.env.LSKY_URL && process.env.LSKY_TOKEN) {
+                try { lskyUrl = await uploadToLsky(mediaUrl); } catch (e) { console.error('Lsky failed', e); }
+            }
+
+            const id = (isVideoResult ? 'video-gen-' : 'gen-') + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+
+            if (isVideoResult) {
+                const videoRecord = {
+                    id, url: mediaUrl, prompt, model,
+                    provider: provider.name, providerType: provider.type,
+                    sourceImageUrl: sourceImageUrl || null,
+                    aspectRatio: videoConfig?.aspect_ratio || null,
+                    type: sourceImageUrl ? 'image-to-video' : 'text-to-video',
+                    timestamp, hidden: false, source: 'generated'
+                };
+                addVideoToDb(videoRecord);
+                records.push(videoRecord);
+            } else {
+                const imageRecord = {
+                    id, url: mediaUrl, lskyUrl,
+                    prompt, model,
+                    provider: provider.name, providerType: provider.type,
+                    size: imageConfig?.size || size || null,
+                    quality: quality || null, style: style || null,
+                    timestamp, hidden: false,
+                };
+                addImageToDb(imageRecord);
+                records.push(imageRecord);
+            }
+        }
+
+        res.json(records.length === 1 ? records[0] : { results: records, count: records.length });
+
+    } catch (error) {
+        console.error('Generation error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ==================== Image Endpoints ====================
+
+app.get('/api/images', (req, res) => {
+    const db = readDb();
+    // Return all images (including hidden) — frontend handles display
+    res.json(db.images);
+});
+
+app.get('/api/images/stats', (req, res) => {
+    const db = readDb();
+    res.json(db.statistics || { total: 0, byModel: {} });
+});
+
+// Manual Image Collection
+app.post('/api/images/manual', (req, res) => {
+    const { url, prompt, model, aspectRatio } = req.body;
+
+    if (!url || !prompt) {
+        return res.status(400).json({ error: 'URL and prompt are required.' });
+    }
+
+    try {
+        new URL(url);
+    } catch (e) {
+        return res.status(400).json({ error: 'Invalid URL format.' });
+    }
+
+    const id = 'manual-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+
+    const imageRecord = {
+        id: id,
+        url: url,
+        lskyUrl: null,
+        prompt: prompt,
+        model: model || 'Manual',
+        aspectRatio: aspectRatio || 'Unknown',
+        resolution: null,
+        safety_tolerance: null,
+        timestamp: new Date().toISOString(),
+        hidden: false,
+        source: 'manual'
+    };
+
+    addImageToDb(imageRecord);
+    res.json(imageRecord);
+});
+
+app.delete('/api/images/:id', (req, res) => {
+    const { id } = req.params;
+    const db = readDb();
+    const initialLength = db.images.length;
+    db.images = db.images.filter(img => img.id !== id);
+    if (db.images.length === initialLength) {
+        return res.status(404).json({ error: 'Image not found' });
+    }
+    writeDb(db);
+    res.json({ success: true });
+});
+
+app.patch('/api/images/:id/hide', (req, res) => {
+    const { id } = req.params;
+    const db = readDb();
+    const image = db.images.find(img => img.id === id);
+    if (!image) {
+        return res.status(404).json({ error: 'Image not found' });
+    }
+    image.hidden = true;
+    writeDb(db);
+    res.json({ success: true });
+});
+
+app.patch('/api/images/:id/unhide', (req, res) => {
+    const { id } = req.params;
+    const db = readDb();
+    const image = db.images.find(img => img.id === id);
+    if (!image) {
+        return res.status(404).json({ error: 'Image not found' });
+    }
+    image.hidden = false;
+    writeDb(db);
+    res.json({ success: true });
+});
+
+// ==================== Video Endpoints ====================
+
+app.get('/api/videos', (req, res) => {
+    const db = readDb();
+    // Return all videos (including hidden) — frontend handles display
+    res.json(db.videos || []);
+});
+
+app.get('/api/videos/stats', (req, res) => {
+    const db = readDb();
+    res.json({
+        videoTotal: db.statistics.videoTotal || 0,
+        videoByModel: db.statistics.videoByModel || {}
+    });
+});
+
+app.post('/api/videos/text-to-video', (req, res) => {
+    const { url, prompt, model, aspectRatio } = req.body;
+
+    if (!url || !prompt) {
+        return res.status(400).json({ error: 'Video URL and prompt are required.' });
+    }
+
+    try {
+        new URL(url);
+    } catch (e) {
+        return res.status(400).json({ error: 'Invalid video URL format.' });
+    }
+
+    const id = 'video-t2v-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+
+    const videoRecord = {
+        id: id,
+        url: url,
+        prompt: prompt,
+        model: model || 'Unknown',
+        aspectRatio: aspectRatio || 'Unknown',
+        type: 'text-to-video',
+        timestamp: new Date().toISOString(),
+        hidden: false,
+        source: 'manual'
+    };
+
+    addVideoToDb(videoRecord);
+    res.json(videoRecord);
+});
+
+app.post('/api/videos/image-to-video', (req, res) => {
+    const { url, sourceImageUrl, prompt, model, aspectRatio } = req.body;
+
+    if (!url || !sourceImageUrl) {
+        return res.status(400).json({ error: 'Video URL and source image URL are required.' });
+    }
+
+    try {
+        new URL(url);
+    } catch (e) {
+        return res.status(400).json({ error: 'Invalid video URL format.' });
+    }
+
+    try {
+        new URL(sourceImageUrl);
+    } catch (e) {
+        return res.status(400).json({ error: 'Invalid source image URL format.' });
+    }
+
+    const id = 'video-i2v-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+
+    const videoRecord = {
+        id: id,
+        url: url,
+        sourceImageUrl: sourceImageUrl,
+        prompt: prompt || '',
+        model: model || 'Unknown',
+        aspectRatio: aspectRatio || 'Unknown',
+        type: 'image-to-video',
+        timestamp: new Date().toISOString(),
+        hidden: false,
+        source: 'manual'
+    };
+
+    addVideoToDb(videoRecord);
+    res.json(videoRecord);
+});
+
+app.delete('/api/videos/:id', (req, res) => {
+    const { id } = req.params;
+    const db = readDb();
+    if (!db.videos) {
+        return res.status(404).json({ error: 'Video not found' });
+    }
+    const initialLength = db.videos.length;
+    db.videos = db.videos.filter(v => v.id !== id);
+    if (db.videos.length === initialLength) {
+        return res.status(404).json({ error: 'Video not found' });
+    }
+    writeDb(db);
+    res.json({ success: true });
+});
+
+app.patch('/api/videos/:id/hide', (req, res) => {
+    const { id } = req.params;
+    const db = readDb();
+    if (!db.videos) {
+        return res.status(404).json({ error: 'Video not found' });
+    }
+    const video = db.videos.find(v => v.id === id);
+    if (!video) {
+        return res.status(404).json({ error: 'Video not found' });
+    }
+    video.hidden = true;
+    writeDb(db);
+    res.json({ success: true });
+});
+
+app.patch('/api/videos/:id/unhide', (req, res) => {
+    const { id } = req.params;
+    const db = readDb();
+    if (!db.videos) {
+        return res.status(404).json({ error: 'Video not found' });
+    }
+    const video = db.videos.find(v => v.id === id);
+    if (!video) {
+        return res.status(404).json({ error: 'Video not found' });
+    }
+    video.hidden = false;
+    writeDb(db);
+    res.json({ success: true });
+});
+
+// ==================== Image Upload ====================
+
+app.post('/api/upload', async (req, res) => {
+    try {
+        const { imageData } = req.body;
+
+        if (!imageData) {
+            return res.status(400).json({ error: 'No image data provided' });
+        }
+
+        const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+        const filename = `upload-${Date.now()}.png`;
+        const mockUrl = `data:image/png;base64,${base64Data}`;
+
+        res.json({ url: mockUrl, filename });
+    } catch (error) {
+        console.error('Upload error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ==================== Server Startup ====================
+
 app.listen(PORT, () => {
     console.log('==============================================');
-    console.log('🚀 FAL.ai Image Generator Pro v2.0.0');
+    console.log('🚀 AI Studio v3.0.0');
     console.log('==============================================');
     console.log(`📍 Server running on http://localhost:${PORT}`);
-    console.log(`🔑 FAL_KEY: ${FAL_KEY ? '✅ Configured' : '❌ Missing'}`);
     console.log(`🔐 Authentication: ${AUTH_PASSWORD ? '✅ Enabled' : '⚠️ Disabled'}`);
     console.log(`☁️  Lsky Pro: ${process.env.LSKY_URL ? '✅ Configured' : '⚠️ Disabled'}`);
     console.log('==============================================');
-    console.log('🤖 Available Models:');
-    Object.entries(FAL_MODEL_CONFIG).forEach(([id, config]) => {
-        console.log(`   • ${config.logName} (${id})`);
-        console.log(`     - Type: ${config.type}`);
-        console.log(`     - Aspect Ratios: ${config.supports.aspectRatios.length} options`);
-    });
+    if (PROVIDERS.length === 0) {
+        console.log('⚠️  No providers configured! Set PROVIDER_N_* environment variables.');
+    } else {
+        console.log(`🤖 Configured Providers (${PROVIDERS.length}):`);
+        PROVIDERS.forEach(p => {
+            console.log(`   • ${p.name} [${p.type}]`);
+            if (p.type === 'grok2api') {
+                if (p.imageModels.length) console.log(`     Image: ${p.imageModels.join(', ')}`);
+                if (p.imageEditModels.length) console.log(`     Edit:  ${p.imageEditModels.join(', ')}`);
+                if (p.videoModels.length) console.log(`     Video: ${p.videoModels.join(', ')}`);
+            } else {
+                console.log(`     Models: ${p.models.join(', ')}`);
+            }
+        });
+    }
     console.log('==============================================');
     console.log('📖 API Endpoints:');
-    console.log(`   • GET  /health - Health check`);
-    console.log(`   • GET  /api/models - List models`);
-    console.log(`   • POST /api/generate - Generate image`);
-    console.log(`   • POST /api/generate/bulk - Bulk generate`);
-    console.log(`   • GET  /api/images - List images`);
-    console.log(`   • GET  /api/images/stats - Statistics`);
+    console.log('   • GET  /health - Health check');
+    console.log('   • GET  /api/providers - List providers & models');
+    console.log('   • POST /api/generate - Generate image');
+    console.log('   • GET  /api/images - List images');
+    console.log('   • GET  /api/images/stats - Statistics');
+    console.log('   • POST /api/images/manual - Add manual image');
+    console.log('   • GET  /api/videos - List videos');
     console.log('==============================================');
 });

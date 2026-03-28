@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fal.ai Studio</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M15.477 0c.415 0 .749.338.788.752a7.775 7.775 0 006.985 6.984c.413.04.752.373.752.788v6.952c0 .415-.338.748-.752.788a7.775 7.775 0 00-6.985 6.984c-.04.414-.373.752-.788.752H8.525c-.416 0-.749-.338-.789-.752a7.775 7.775 0 00-6.984-6.984c-.414-.04-.752-.373-.752-.788V8.524c0-.415.338-.748.752-.788A7.775 7.775 0 007.736.752C7.776.338 8.11 0 8.526 0h6.95zM4.819 11.98a7.226 7.226 0 007.223 7.23 7.226 7.226 0 007.223-7.23c0-3.994-3.234-7.23-7.223-7.23a7.227 7.227 0 00-7.223 7.23z' fill='%238B5CF6'/%3E%3C/svg%3E">
+    <title>AI Studio</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M15.477 0c.415 0 .749.338.788.752a7.775 7.775 0 006.985 6.984c.413.04.752.373.752.788v6.952c0 .415-.338.748-.752.788a7.775 7.775 0 00-6.985 6.984c-.04.414-.373.752-.788.752H8.525c-.416 0-.749-.338-.789-.752a7.775 7.775 0 00-6.984-6.984c-.414-.04-.752-.373-.752-.788V8.524c0-.415.338-.748.752-.788A7.775 7.775 0 007.736.752C7.776.338 8.11 0 8.526 0h6.95z' fill='%238B5CF6'/%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
@@ -32,20 +32,17 @@
     <div class="flex min-h-screen">
         <!-- Sidebar -->
         <aside class="w-72 border-r border-white/5 bg-dark-900/80 backdrop-blur-xl flex flex-col fixed h-full z-40">
-            <!-- Logo -->
             <div class="p-6 border-b border-white/5">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-aurora-purple to-aurora-pink flex items-center justify-center">
                         <svg class="w-6 h-6 text-white" viewBox="0 0 24 24"><path d="M15.477 0c.415 0 .749.338.788.752a7.775 7.775 0 006.985 6.984c.413.04.752.373.752.788v6.952c0 .415-.338.748-.752.788a7.775 7.775 0 00-6.985 6.984c-.04.414-.373.752-.788.752H8.525c-.416 0-.749-.338-.789-.752a7.775 7.775 0 00-6.984-6.984c-.414-.04-.752-.373-.752-.788V8.524c0-.415.338-.748.752-.788A7.775 7.775 0 007.736.752C7.776.338 8.11 0 8.526 0h6.95z" fill="currentColor"/></svg>
                     </div>
                     <div>
-                        <h1 class="font-serif text-xl font-semibold">Fal.ai</h1>
+                        <h1 class="font-serif text-xl font-semibold">AI Studio</h1>
                         <p class="text-xs text-zinc-500">Creative Studio</p>
                     </div>
                 </div>
             </div>
-
-            <!-- Navigation -->
             <nav class="flex-1 p-4 space-y-1">
                 <button class="nav-btn active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 cursor-pointer" data-tab="create">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
@@ -60,16 +57,14 @@
                     <span class="font-medium">Collection</span>
                 </button>
                 <button class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 cursor-pointer" data-tab="video">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-1.5A1.125 1.125 0 0118 18.375M20.625 4.5H3.375m17.25 0c.621 0 1.125.504 1.125 1.125M20.625 4.5h-1.5C18.504 4.5 18 5.004 18 5.625m3.75 0v1.5c0 .621-.504 1.125-1.125 1.125M3.375 4.5c-.621 0-1.125.504-1.125 1.125M3.375 4.5h1.5C5.496 4.5 6 5.004 6 5.625m-3.75 0v1.5c0 .621.504 1.125 1.125 1.125m0 0h1.5m-1.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m1.5-3.75C5.496 8.25 6 7.746 6 7.125v-1.5M4.875 8.25C5.496 8.25 6 8.754 6 9.375v1.5m0-5.25v5.25m0-5.25C6 5.004 6.504 4.5 7.125 4.5h9.75c.621 0 1.125.504 1.125 1.125m1.125 2.625h1.5m-1.5 0A1.125 1.125 0 0118 7.125v-1.5m1.125 2.625c-.621 0-1.125.504-1.125 1.125v1.5m2.625-2.625c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125M18 5.625v5.25M7.125 12h9.75m-9.75 0A1.125 1.125 0 016 10.875M7.125 12C6.504 12 6 12.504 6 13.125m0-2.25C6 11.496 5.496 12 4.875 12M18 10.875c0 .621-.504 1.125-1.125 1.125M18 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m-12 5.25v-5.25m0 5.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125m-12 0v-1.5c0-.621-.504-1.125-1.125-1.125M18 18.375v-5.25m0 5.25v-1.5c0-.621.504-1.125 1.125-1.125M18 13.125v1.5c0 .621.504 1.125 1.125 1.125M18 13.125c0-.621.504-1.125 1.125-1.125M6 13.125v1.5c0 .621-.504 1.125-1.125 1.125M6 13.125C6 12.504 5.496 12 4.875 12m-1.5 0h1.5m14.25 0h1.5"/></svg>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z"/></svg>
                     <span class="font-medium">Video</span>
                 </button>
             </nav>
-
-            <!-- Footer -->
             <div class="p-4 border-t border-white/5">
                 <div class="px-4 py-3 rounded-xl bg-gradient-to-r from-aurora-purple/10 to-aurora-pink/10 border border-white/5">
                     <p class="text-xs text-zinc-400">Powered by</p>
-                    <p class="text-sm font-medium text-white">Fal.ai API</p>
+                    <p class="text-sm font-medium text-white">Multi-API</p>
                 </div>
             </div>
         </aside>
@@ -79,77 +74,130 @@
             <!-- Create View -->
             <div id="create-view" class="view p-8">
                 <div class="max-w-6xl mx-auto">
-                    <!-- Header -->
                     <div class="mb-8">
                         <h2 class="font-serif text-4xl font-semibold mb-2">Create Magic</h2>
                         <p class="text-zinc-400">Transform your imagination into stunning visuals</p>
                     </div>
-
-                    <!-- Bento Grid Layout -->
                     <div class="grid grid-cols-12 gap-6">
-                        <!-- Controls Card - Spans 5 columns -->
                         <div class="col-span-12 lg:col-span-5 space-y-6">
                             <div class="bg-dark-800/50 backdrop-blur-sm rounded-2xl border border-white/5 p-6">
-                                <h3 class="text-lg font-medium mb-6 flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-aurora-purple"></span>
-                                    Configuration
-                                </h3>
-
+                                <h3 class="text-lg font-medium mb-6 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-aurora-purple"></span>Configuration</h3>
+                                <!-- Provider -->
+                                <div class="space-y-2 mb-5">
+                                    <label class="text-sm text-zinc-400">Provider</label>
+                                    <select id="provider" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white transition-all focus:border-aurora-purple/50 focus:ring-2 focus:ring-aurora-purple/20 cursor-pointer"></select>
+                                </div>
+                                <!-- Mode Tabs (only for grok2api) -->
+                                <div id="mode-tabs" class="hidden mb-5">
+                                    <label class="text-sm text-zinc-400 mb-2 block">Mode</label>
+                                    <div class="flex gap-1 p-1 bg-dark-700/50 rounded-xl border border-white/10">
+                                        <button class="mode-btn flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all cursor-pointer" data-mode="text-to-image">🖼 Image</button>
+                                        <button class="mode-btn flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all cursor-pointer" data-mode="image-edit">✏️ Edit</button>
+                                        <button class="mode-btn flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all cursor-pointer" data-mode="text-to-video">🎬 T2V</button>
+                                        <button class="mode-btn flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all cursor-pointer" data-mode="image-to-video">🎬 I2V</button>
+                                    </div>
+                                </div>
                                 <!-- Model -->
                                 <div class="space-y-2 mb-5">
                                     <label class="text-sm text-zinc-400">Model</label>
-                                    <select id="model" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white transition-all focus:border-aurora-purple/50 focus:ring-2 focus:ring-aurora-purple/20 cursor-pointer">
-                                        <option value="flux-1.1-pro-ultra">Flux 1.1 Pro Ultra</option>
-                                        <option value="flux-2-pro">FLUX 2 Pro</option>
-                                        <option value="imagen4-preview">Imagen 4 Preview</option>
-                                        <option value="nano-banana-pro">Nano Banana Pro</option>
-                                        <option value="flux-2-pro-edit">FLUX 2 Pro Edit</option>
-                                        <option value="nano-banana-pro-edit">Gemini 3 Pro Image Edit</option>
-                                    </select>
+                                    <select id="model" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white transition-all focus:border-aurora-purple/50 focus:ring-2 focus:ring-aurora-purple/20 cursor-pointer"></select>
                                 </div>
-
-                                <!-- Aspect Ratio -->
-                                <div id="control-aspect-ratio" class="space-y-2 mb-5">
-                                    <label class="text-sm text-zinc-400">Aspect Ratio</label>
-                                    <div class="grid grid-cols-4 gap-2" id="aspect-grid">
-                                        <button type="button" class="aspect-btn active h-10 rounded-lg border border-white/10 text-sm transition-all cursor-pointer" data-value="1:1">1:1</button>
-                                        <button type="button" class="aspect-btn h-10 rounded-lg border border-white/10 text-sm transition-all cursor-pointer" data-value="16:9">16:9</button>
-                                        <button type="button" class="aspect-btn h-10 rounded-lg border border-white/10 text-sm transition-all cursor-pointer" data-value="9:16">9:16</button>
-                                        <button type="button" class="aspect-btn h-10 rounded-lg border border-white/10 text-sm transition-all cursor-pointer" data-value="4:3">4:3</button>
-                                    </div>
-                                    <input type="hidden" id="aspect_ratio" value="1:1">
-                                </div>
-
-                                <!-- Resolution (hidden) -->
-                                <div id="control-resolution" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm text-zinc-400">Resolution</label>
-                                    <select id="resolution" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white transition-all focus:border-aurora-purple/50 cursor-pointer">
-                                        <option value="1K">1K Standard</option>
-                                        <option value="2K">2K High</option>
-                                        <option value="4K">4K Ultra</option>
-                                    </select>
-                                </div>
-
-                                <!-- Safety (hidden) -->
-                                <div id="control-safety" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm text-zinc-400">Safety Level</label>
-                                    <input type="range" id="safety_tolerance" min="1" max="5" value="2" class="w-full accent-aurora-purple cursor-pointer">
-                                    <div class="flex justify-between text-xs text-zinc-500"><span>Strict</span><span>Permissive</span></div>
-                                </div>
-
-                                <!-- Edit URL (hidden) -->
-                                <div id="control-edit" class="space-y-2 mb-5 hidden">
+                                <!-- Source Image URL (for Edit / I2V) -->
+                                <div id="control-source-image" class="space-y-2 mb-5 hidden">
                                     <label class="text-sm text-zinc-400">Source Image URL</label>
-                                    <input type="text" id="image_url" placeholder="https://..." class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white placeholder-zinc-600 transition-all focus:border-aurora-purple/50">
+                                    <input id="source-image-url" type="url" placeholder="https://..." class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white placeholder-zinc-600 transition-all focus:border-aurora-purple/50 focus:ring-2 focus:ring-aurora-purple/20">
+                                </div>
+                                <!-- Image Size (grok2api image modes) -->
+                                <div id="control-grok-size" class="space-y-2 mb-5 hidden">
+                                    <label class="text-sm text-zinc-400">Size</label>
+                                    <select id="grok-size" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer">
+                                        <option value="1024x1024">1024×1024</option>
+                                        <option value="1280x720">1280×720</option>
+                                        <option value="720x1280">720×1280</option>
+                                        <option value="1792x1024">1792×1024</option>
+                                        <option value="1024x1792">1024×1792</option>
+                                    </select>
+                                </div>
+                                <!-- Image Count (grok2api image modes) -->
+                                <div id="control-grok-n" class="space-y-2 mb-5 hidden">
+                                    <label class="text-sm text-zinc-400">Number of Images</label>
+                                    <select id="grok-n" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer">
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="4">4</option>
+                                    </select>
+                                </div>
+                                <!-- Video: Aspect Ratio -->
+                                <div id="control-video-ratio" class="space-y-2 mb-5 hidden">
+                                    <label class="text-sm text-zinc-400">Aspect Ratio</label>
+                                    <select id="video-ratio" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer">
+                                        <option value="3:2">3:2</option>
+                                        <option value="16:9">16:9</option>
+                                        <option value="9:16">9:16</option>
+                                        <option value="2:3">2:3</option>
+                                        <option value="1:1">1:1</option>
+                                    </select>
+                                </div>
+                                <!-- Video: Duration -->
+                                <div id="control-video-duration" class="space-y-2 mb-5 hidden">
+                                    <label class="text-sm text-zinc-400">Duration</label>
+                                    <select id="video-duration" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer">
+                                        <option value="6">6 seconds</option>
+                                        <option value="10">10 seconds</option>
+                                        <option value="15">15 seconds</option>
+                                    </select>
+                                </div>
+                                <!-- Video: Resolution -->
+                                <div id="control-video-resolution" class="space-y-2 mb-5 hidden">
+                                    <label class="text-sm text-zinc-400">Resolution</label>
+                                    <select id="video-resolution" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer">
+                                        <option value="480p">480p</option>
+                                        <option value="720p">720p</option>
+                                    </select>
+                                </div>
+                                <!-- Video: Preset -->
+                                <div id="control-video-preset" class="space-y-2 mb-5 hidden">
+                                    <label class="text-sm text-zinc-400">Preset</label>
+                                    <select id="video-preset" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer">
+                                        <option value="custom">Custom</option>
+                                        <option value="fun">Fun</option>
+                                        <option value="normal">Normal</option>
+                                        <option value="spicy">Spicy</option>
+                                    </select>
+                                </div>
+                                <!-- Size / Quality / Style (OpenAI standard) -->
+                                <div id="control-size" class="space-y-2 mb-5 hidden">
+                                    <label class="text-sm text-zinc-400">Size</label>
+                                    <select id="size" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer">
+                                        <option value="">Auto</option>
+                                        <option value="1024x1024">1024×1024</option>
+                                        <option value="1024x1792">1024×1792</option>
+                                        <option value="1792x1024">1792×1024</option>
+                                    </select>
+                                </div>
+                                <div id="control-quality" class="space-y-2 mb-5 hidden">
+                                    <label class="text-sm text-zinc-400">Quality</label>
+                                    <select id="quality" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer">
+                                        <option value="">Auto</option>
+                                        <option value="standard">Standard</option>
+                                        <option value="hd">HD</option>
+                                        <option value="high">High</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="low">Low</option>
+                                    </select>
+                                </div>
+                                <div id="control-style" class="space-y-2 mb-5 hidden">
+                                    <label class="text-sm text-zinc-400">Style</label>
+                                    <select id="style" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer">
+                                        <option value="">Auto</option>
+                                        <option value="vivid">Vivid</option>
+                                        <option value="natural">Natural</option>
+                                    </select>
                                 </div>
                             </div>
-
-                            <!-- Prompt Card -->
                             <div class="bg-dark-800/50 backdrop-blur-sm rounded-2xl border border-white/5 p-6">
-                                <h3 class="text-lg font-medium mb-4 flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-aurora-pink"></span>
-                                    Prompt
-                                </h3>
+                                <h3 class="text-lg font-medium mb-4 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-aurora-pink"></span>Prompt</h3>
                                 <textarea id="prompt" rows="5" placeholder="Describe your vision in detail..." class="w-full px-4 py-3 rounded-xl bg-dark-700/50 border border-white/10 text-white placeholder-zinc-600 resize-none transition-all focus:border-aurora-purple/50 focus:ring-2 focus:ring-aurora-purple/20"></textarea>
                                 <button id="generateBtn" class="w-full mt-4 h-14 rounded-xl bg-gradient-to-r from-aurora-purple to-aurora-pink text-white font-semibold transition-all hover:opacity-90 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
@@ -157,11 +205,8 @@
                                 </button>
                             </div>
                         </div>
-
-                        <!-- Preview Card - Spans 7 columns -->
                         <div class="col-span-12 lg:col-span-7">
                             <div id="preview-area" class="bg-dark-800/30 backdrop-blur-sm rounded-2xl border border-white/5 min-h-[500px] flex items-center justify-center overflow-hidden">
-                                <!-- Empty State -->
                                 <div id="empty-state" class="text-center p-12">
                                     <div class="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-aurora-purple/20 to-aurora-pink/20 flex items-center justify-center">
                                         <svg class="w-12 h-12 text-aurora-purple/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z"/></svg>
@@ -169,12 +214,10 @@
                                     <h3 class="font-serif text-2xl font-medium mb-2">Your Canvas Awaits</h3>
                                     <p class="text-zinc-500 max-w-sm mx-auto">Configure your settings and describe your vision to bring your imagination to life.</p>
                                 </div>
-                                <!-- Loading State -->
                                 <div id="loading" class="hidden text-center p-12">
                                     <div class="w-16 h-16 mx-auto mb-6 rounded-full border-2 border-aurora-purple/20 border-t-aurora-purple animate-spin"></div>
                                     <p class="text-zinc-400">Creating your masterpiece...</p>
                                 </div>
-                                <!-- Result will be inserted here -->
                             </div>
                         </div>
                     </div>
@@ -184,10 +227,7 @@
             <!-- Gallery View -->
             <div id="gallery-view" class="view hidden p-8">
                 <div class="max-w-7xl mx-auto">
-                    <div class="mb-8">
-                        <h2 class="font-serif text-4xl font-semibold mb-2">Gallery</h2>
-                        <p class="text-zinc-400">Your generated masterpieces</p>
-                    </div>
+                    <div class="mb-8"><h2 class="font-serif text-4xl font-semibold mb-2">Gallery</h2><p class="text-zinc-400">Your generated masterpieces</p></div>
                     <div id="gallery-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
                 </div>
             </div>
@@ -196,7 +236,6 @@
             <div id="collection-view" class="view hidden p-8">
                 <div class="max-w-7xl mx-auto">
                     <div class="flex flex-col lg:flex-row gap-8">
-                        <!-- Add Form -->
                         <div class="lg:w-80 shrink-0">
                             <div class="bg-dark-800/50 backdrop-blur-sm rounded-2xl border border-white/5 p-6 sticky top-8">
                                 <h3 class="text-lg font-medium mb-6">Add to Collection</h3>
@@ -209,7 +248,6 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Grid -->
                         <div class="flex-1">
                             <div class="mb-6"><h2 class="font-serif text-4xl font-semibold mb-2">Collection</h2><p class="text-zinc-400">Manually curated images</p></div>
                             <div id="collection-gallery" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
@@ -222,7 +260,6 @@
             <div id="video-view" class="view hidden p-8">
                 <div class="max-w-7xl mx-auto">
                     <div class="flex flex-col lg:flex-row gap-8">
-                        <!-- Add Form -->
                         <div class="lg:w-80 shrink-0">
                             <div class="bg-dark-800/50 backdrop-blur-sm rounded-2xl border border-white/5 p-6 sticky top-8">
                                 <h3 class="text-lg font-medium mb-6">Add Video</h3>
@@ -237,7 +274,6 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Grid -->
                         <div class="flex-1">
                             <div class="mb-6"><h2 class="font-serif text-4xl font-semibold mb-2">Videos</h2><p class="text-zinc-400">Your video collection</p></div>
                             <div id="video-gallery" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
@@ -248,30 +284,48 @@
         </main>
     </div>
 
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" id="lightbox-overlay"></div>
+        <div class="relative z-10 flex items-start justify-center w-full h-full overflow-y-auto py-8 px-4">
+            <div class="bg-dark-800 rounded-2xl border border-white/10 max-w-3xl w-full shadow-2xl animate-fade-in">
+                <div class="relative">
+                    <button id="lightbox-close" class="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center cursor-pointer transition-colors">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                    <div id="lightbox-media" class="flex items-center justify-center bg-dark-900 rounded-t-2xl min-h-[300px]"></div>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div id="lightbox-tags" class="flex flex-wrap gap-2"></div>
+                    <div>
+                        <label class="text-xs text-zinc-500 uppercase tracking-wider">Prompt</label>
+                        <p id="lightbox-prompt" class="text-sm text-zinc-300 mt-1 whitespace-pre-wrap"></p>
+                    </div>
+                    <div class="flex gap-2 pt-2">
+                        <button id="lightbox-copy" class="flex-1 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm cursor-pointer transition-colors">Copy Prompt</button>
+                        <a id="lightbox-open" href="#" target="_blank" class="flex-1 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm flex items-center justify-center transition-colors">Open Original</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
-        
         .nav-btn { color: #71717a; }
         .nav-btn:hover { background: rgba(255,255,255,0.05); color: #e4e4e7; }
         .nav-btn.active { background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(236,72,153,0.15)); color: #fff; border: 1px solid rgba(139,92,246,0.3); }
-        
-        .aspect-btn { background: rgba(39,39,42,0.5); color: #a1a1aa; }
-        .aspect-btn:hover { background: rgba(63,63,70,0.5); color: #fff; }
-        .aspect-btn.active { background: linear-gradient(135deg, #8B5CF6, #EC4899); color: #fff; border-color: transparent; }
-        
         .card-hover { transition: all 0.3s ease; }
         .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
-        
+        .card-hidden .card-image { filter: blur(20px) brightness(0.5); }
+        .card-hidden .card-hidden-badge { display: flex; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.4s ease-out; }
-        
         @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-        
-        /* Mobile sidebar */
         @media (max-width: 1024px) {
             aside { transform: translateX(-100%); transition: transform 0.3s ease; }
             aside.open { transform: translateX(0); }
@@ -279,362 +333,6 @@
         }
     </style>
 
-    <script>
-        // Elements
-        const $ = id => document.getElementById(id);
-        const generateBtn = $('generateBtn'), addManualBtn = $('addManualBtn'), addVideoBtn = $('addVideoBtn');
-        const previewArea = $('preview-area'), emptyState = $('empty-state'), loading = $('loading');
-        const galleryGrid = $('gallery-grid'), collectionGallery = $('collection-gallery'), videoGallery = $('video-gallery');
-
-        // Navigation
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.addEventListener('click', () => switchTab(btn.dataset.tab));
-        });
-
-        function switchTab(tab) {
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-            document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-            const view = $(`${tab}-view`);
-            if (view) { view.classList.remove('hidden'); view.classList.add('animate-fade-in'); }
-            if (tab === 'gallery') loadGallery();
-            else if (tab === 'collection') loadCollection();
-            else if (tab === 'video') loadVideos();
-        }
-
-        // Aspect ratio buttons
-        document.querySelectorAll('.aspect-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.aspect-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                $('aspect_ratio').value = btn.dataset.value;
-            });
-        });
-
-        // Model change
-        $('model').addEventListener('change', updateControls);
-        updateControls();
-
-        function updateControls() {
-            const model = $('model').value;
-            $('prompt').value = '';
-            $('control-resolution').classList.toggle('hidden', !['nano-banana-pro', 'imagen4-preview', 'nano-banana-pro-edit'].includes(model));
-            $('control-safety').classList.toggle('hidden', !['flux-1.1-pro-ultra', 'flux-2-pro', 'flux-2-pro-edit'].includes(model));
-            $('control-edit').classList.toggle('hidden', !['flux-2-pro-edit', 'nano-banana-pro-edit'].includes(model));
-            
-            // Update aspect buttons based on model
-            const grid = $('aspect-grid');
-            const aspects = getAspects(model);
-            grid.innerHTML = aspects.map((a, i) => `<button type="button" class="aspect-btn ${i===0?'active':''} h-10 rounded-lg border border-white/10 text-sm transition-all cursor-pointer" data-value="${a}">${a}</button>`).join('');
-            $('aspect_ratio').value = aspects[0];
-            grid.querySelectorAll('.aspect-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    grid.querySelectorAll('.aspect-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    $('aspect_ratio').value = btn.dataset.value;
-                });
-            });
-        }
-
-        function getAspects(model) {
-            const map = {
-                'flux-1.1-pro-ultra': ['1:1','16:9','9:16','21:9','4:3','3:2'],
-                'flux-2-pro': ['1:1','16:9','9:16','4:3','3:2'],
-                'imagen4-preview': ['1:1','16:9','9:16','4:3','3:4'],
-                'nano-banana-pro': ['1:1','16:9','9:16','4:3','3:2','21:9'],
-                'flux-2-pro-edit': ['1:1','16:9','9:16','4:3'],
-                'nano-banana-pro-edit': ['auto','1:1','16:9','9:16','4:3']
-            };
-            return map[model] || ['1:1','16:9','9:16','4:3'];
-        }
-
-        // Video type toggle
-        $('video-type').addEventListener('change', () => {
-            $('video-source-image-group').classList.toggle('hidden', $('video-type').value !== 'image-to-video');
-        });
-
-        // Generate
-        generateBtn.addEventListener('click', async () => {
-            const model = $('model').value, prompt = $('prompt').value.trim();
-            const aspectRatio = $('aspect_ratio').value, resolution = $('resolution').value;
-            const safety_tolerance = $('safety_tolerance').value, image_url = $('image_url').value.trim();
-
-            if (!prompt) { alert('Please enter a prompt'); return; }
-            if (['flux-2-pro-edit', 'nano-banana-pro-edit'].includes(model) && !image_url) { alert('Please enter source image URL'); return; }
-
-            generateBtn.disabled = true;
-            loading.classList.remove('hidden');
-            emptyState.classList.add('hidden');
-            previewArea.querySelector('.result-card')?.remove();
-
-            try {
-                const payload = { model, prompt, aspectRatio, async: true }; // Enable async mode
-                if (['nano-banana-pro', 'imagen4-preview', 'nano-banana-pro-edit'].includes(model)) payload.resolution = resolution;
-                if (['flux-1.1-pro-ultra', 'flux-2-pro', 'flux-2-pro-edit'].includes(model)) payload.safety_tolerance = safety_tolerance;
-                if (image_url) payload.image_url = image_url;
-
-                // Submit request
-                const res = await fetch('/api/generate', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(payload)
-                });
-                
-                if (!res.ok) {
-                    if (res.status === 401) { location.href = '/login.html'; return; }
-                    const contentType = res.headers.get('content-type') || '';
-                    if (contentType.includes('application/json')) {
-                        const errData = await res.json();
-                        throw new Error(errData.error || `Request failed: ${res.status}`);
-                    }
-                    throw new Error(`服务器错误: ${res.status}`);
-                }
-                
-                const submitData = await res.json();
-                
-                // If we got a direct result (sync mode fallback)
-                if (submitData.url) {
-                    renderPreview(submitData);
-                    return;
-                }
-                
-                // Async mode: poll for result
-                const requestId = submitData.requestId;
-                if (!requestId) throw new Error('No requestId returned');
-                
-                // Poll for completion (max 10 minutes)
-                const maxPolls = 600;
-                for (let i = 0; i < maxPolls; i++) {
-                    await new Promise(r => setTimeout(r, 2000)); // Poll every 2 seconds
-                    
-                    const statusRes = await fetch(`/api/generate/status/${requestId}?model=${model}`);
-                    if (!statusRes.ok) continue;
-                    
-                    const statusData = await statusRes.json();
-                    
-                    if (statusData.status === 'completed') {
-                        // Build result object
-                        const result = {
-                            id: requestId,
-                            url: statusData.url,
-                            lskyUrl: statusData.lskyUrl,
-                            prompt: prompt,
-                            model: model,
-                            aspectRatio: aspectRatio,
-                            resolution: resolution
-                        };
-                        renderPreview(result);
-                        
-                        // Reload gallery to show new image
-                        loadGallery();
-                        return;
-                    }
-                    
-                    if (statusData.status === 'failed') {
-                        throw new Error(statusData.error || 'Generation failed');
-                    }
-                    
-                    // Still processing, continue polling
-                }
-                
-                throw new Error('生成超时，请检查 Gallery');
-                
-            } catch (e) {
-                console.error(e);
-                alert('Error: ' + e.message);
-                emptyState.classList.remove('hidden');
-            } finally {
-                generateBtn.disabled = false;
-                loading.classList.add('hidden');
-            }
-        });
-
-        function renderPreview(data) {
-            const url = data.lskyUrl || data.url;
-            const card = document.createElement('div');
-            card.className = 'result-card w-full h-full flex flex-col animate-fade-in';
-            card.dataset.prompt = data.prompt;
-            card.innerHTML = `
-                <div class="flex-1 flex items-center justify-center p-4 bg-dark-900/50">
-                    <img src="${url}" alt="Generated" class="max-w-full max-h-[400px] object-contain rounded-xl shadow-2xl">
-                </div>
-                <div class="p-4 border-t border-white/5 space-y-3">
-                    <div class="flex flex-wrap gap-2">
-                        <span class="px-3 py-1 text-xs font-medium bg-aurora-purple/20 text-aurora-purple rounded-full">${escapeHtml(data.model)}</span>
-                        <span class="px-3 py-1 text-xs font-medium bg-white/10 text-zinc-300 rounded-full">${escapeHtml(data.aspectRatio)}</span>
-                    </div>
-                    <p class="text-sm text-zinc-400 line-clamp-2">${escapeHtml(data.prompt)}</p>
-                    <div class="flex gap-2">
-                        <button class="copy-btn flex-1 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm cursor-pointer transition-colors">Copy Prompt</button>
-                        <a href="${url}" target="_blank" class="flex-1 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm flex items-center justify-center transition-colors">Open</a>
-                    </div>
-                </div>
-            `;
-            card.querySelector('.copy-btn').addEventListener('click', () => copyToClipboard(data.prompt));
-            previewArea.appendChild(card);
-        }
-
-        // Add Manual
-        addManualBtn.addEventListener('click', async () => {
-            const url = $('manual-url').value.trim(), prompt = $('manual-prompt').value.trim();
-            const model = $('manual-model').value.trim(), aspectRatio = $('manual-aspect').value;
-            if (!url || !prompt) { alert('Please enter URL and prompt'); return; }
-            addManualBtn.disabled = true;
-            try {
-                const res = await fetch('/api/images/manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, prompt, model, aspectRatio }) });
-                if (!res.ok) { if (res.status === 401) { location.href = '/login.html'; return; } throw new Error((await res.json()).error); }
-                $('manual-url').value = ''; $('manual-prompt').value = ''; $('manual-model').value = ''; $('manual-aspect').value = '';
-                loadCollection(); alert('Added!');
-            } catch (e) { alert('Error: ' + e.message); }
-            finally { addManualBtn.disabled = false; }
-        });
-
-        // Add Video
-        addVideoBtn.addEventListener('click', async () => {
-            const type = $('video-type').value, url = $('video-url').value.trim();
-            const sourceImageUrl = $('video-source-image').value.trim(), prompt = $('video-prompt').value.trim();
-            const model = $('video-model').value.trim(), aspectRatio = $('video-aspect').value;
-            if (!url) { alert('Please enter video URL'); return; }
-            if (type === 'text-to-video' && !prompt) { alert('Please enter prompt'); return; }
-            if (type === 'image-to-video' && !sourceImageUrl) { alert('Please enter source image'); return; }
-            addVideoBtn.disabled = true;
-            try {
-                const endpoint = type === 'text-to-video' ? '/api/videos/text-to-video' : '/api/videos/image-to-video';
-                const payload = type === 'text-to-video' ? { url, prompt, model, aspectRatio } : { url, sourceImageUrl, prompt, model, aspectRatio };
-                const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!res.ok) { if (res.status === 401) { location.href = '/login.html'; return; } throw new Error((await res.json()).error); }
-                $('video-url').value = ''; $('video-source-image').value = ''; $('video-prompt').value = ''; $('video-model').value = ''; $('video-aspect').value = '';
-                loadVideos(); alert('Added!');
-            } catch (e) { alert('Error: ' + e.message); }
-            finally { addVideoBtn.disabled = false; }
-        });
-
-        // Load functions
-        async function loadGallery() {
-            galleryGrid.innerHTML = '<div class="col-span-full flex justify-center py-20"><div class="w-10 h-10 rounded-full border-2 border-aurora-purple/20 border-t-aurora-purple animate-spin"></div></div>';
-            try {
-                const res = await fetch('/api/images');
-                if (res.status === 401) { location.href = '/login.html'; return; }
-                const images = (await res.json()).filter(i => i.source !== 'manual');
-                galleryGrid.innerHTML = images.length ? '' : '<p class="col-span-full text-center text-zinc-500 py-20">No images yet</p>';
-                images.forEach(img => renderCard(img, galleryGrid));
-            } catch (e) { galleryGrid.innerHTML = '<p class="col-span-full text-center text-red-400 py-20">Failed to load</p>'; }
-        }
-
-        async function loadCollection() {
-            collectionGallery.innerHTML = '<div class="col-span-full flex justify-center py-20"><div class="w-10 h-10 rounded-full border-2 border-aurora-purple/20 border-t-aurora-purple animate-spin"></div></div>';
-            try {
-                const res = await fetch('/api/images');
-                if (res.status === 401) { location.href = '/login.html'; return; }
-                const images = (await res.json()).filter(i => i.source === 'manual');
-                collectionGallery.innerHTML = images.length ? '' : '<p class="col-span-full text-center text-zinc-500 py-20">No collection yet</p>';
-                images.forEach(img => renderCard(img, collectionGallery));
-            } catch (e) { collectionGallery.innerHTML = '<p class="col-span-full text-center text-red-400 py-20">Failed to load</p>'; }
-        }
-
-        async function loadVideos() {
-            videoGallery.innerHTML = '<div class="col-span-full flex justify-center py-20"><div class="w-10 h-10 rounded-full border-2 border-aurora-purple/20 border-t-aurora-purple animate-spin"></div></div>';
-            try {
-                const res = await fetch('/api/videos');
-                if (res.status === 401) { location.href = '/login.html'; return; }
-                const videos = await res.json();
-                videoGallery.innerHTML = videos.length ? '' : '<p class="col-span-full text-center text-zinc-500 py-20">No videos yet</p>';
-                videos.forEach(v => renderVideoCard(v, videoGallery));
-            } catch (e) { videoGallery.innerHTML = '<p class="col-span-full text-center text-red-400 py-20">Failed to load</p>'; }
-        }
-
-        function renderCard(data, container) {
-            const url = data.lskyUrl || data.url;
-            const date = new Date(data.timestamp);
-            const card = document.createElement('div');
-            card.className = 'group bg-dark-800/50 rounded-2xl border border-white/5 overflow-hidden card-hover cursor-pointer animate-fade-in';
-            card.id = `card-${data.id}`;
-            card.dataset.prompt = data.prompt; // Store prompt in data attribute
-            card.innerHTML = `
-                <div class="aspect-square overflow-hidden bg-dark-900">
-                    <img src="${url}" alt="Image" loading="lazy" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
-                </div>
-                <div class="p-4 space-y-3">
-                    <div class="flex flex-wrap gap-1.5">
-                        <span class="px-2 py-0.5 text-[10px] font-medium bg-aurora-purple/20 text-aurora-purple rounded">${escapeHtml(data.model)}</span>
-                        <span class="px-2 py-0.5 text-[10px] font-medium bg-white/10 text-zinc-400 rounded">${escapeHtml(data.aspectRatio)}</span>
-                    </div>
-                    <p class="text-xs text-zinc-500 line-clamp-2">${escapeHtml(data.prompt)}</p>
-                    <div class="flex items-center justify-between pt-2 border-t border-white/5">
-                        <span class="text-[10px] text-zinc-600">${date.toLocaleDateString('zh-CN')}</span>
-                        <div class="flex gap-1">
-                            <button class="copy-btn w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors cursor-pointer" title="Copy">
-                                <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/></svg>
-                            </button>
-                            <a href="${url}" target="_blank" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors" title="Open">
-                                <svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
-                            </a>
-                            <button class="delete-img-btn w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center transition-colors cursor-pointer" data-id="${data.id}" title="Delete">
-                                <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            // Add event listeners
-            card.querySelector('.copy-btn').addEventListener('click', (e) => { e.stopPropagation(); copyToClipboard(data.prompt); });
-            card.querySelector('.delete-img-btn').addEventListener('click', (e) => { e.stopPropagation(); deleteImage(data.id); });
-            container.appendChild(card);
-        }
-
-        function renderVideoCard(data, container) {
-            const date = new Date(data.timestamp);
-            const typeLabel = data.type === 'text-to-video' ? 'T2V' : 'I2V';
-            const card = document.createElement('div');
-            card.className = 'group bg-dark-800/50 rounded-2xl border border-white/5 overflow-hidden card-hover animate-fade-in';
-            card.id = `card-${data.id}`;
-            card.dataset.prompt = data.prompt || '';
-            card.innerHTML = `
-                <div class="relative bg-black">
-                    <span class="absolute top-3 left-3 z-10 px-2 py-1 text-[10px] font-bold bg-gradient-to-r from-aurora-purple to-aurora-pink text-white rounded">${typeLabel}</span>
-                    <video controls preload="metadata" class="w-full aspect-video object-contain"><source src="${data.url}" type="video/mp4"></video>
-                </div>
-                <div class="p-4 space-y-3">
-                    <div class="flex flex-wrap gap-1.5">
-                        <span class="px-2 py-0.5 text-[10px] font-medium bg-aurora-purple/20 text-aurora-purple rounded">${escapeHtml(data.model || 'Unknown')}</span>
-                        <span class="px-2 py-0.5 text-[10px] font-medium bg-white/10 text-zinc-400 rounded">${escapeHtml(data.aspectRatio || '-')}</span>
-                    </div>
-                    ${data.prompt ? `<p class="text-xs text-zinc-500 line-clamp-2">${escapeHtml(data.prompt)}</p>` : ''}
-                    <div class="flex items-center justify-between pt-2 border-t border-white/5">
-                        <span class="text-[10px] text-zinc-600">${date.toLocaleDateString('zh-CN')}</span>
-                        <div class="flex gap-1">
-                            ${data.prompt ? `<button class="copy-btn w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors cursor-pointer"><svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/></svg></button>` : ''}
-                            <a href="${data.url}" target="_blank" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"><svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg></a>
-                            <button class="delete-video-btn w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center transition-colors cursor-pointer" data-id="${data.id}"><svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg></button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            // Add event listeners
-            const copyBtn = card.querySelector('.copy-btn');
-            if (copyBtn) copyBtn.addEventListener('click', (e) => { e.stopPropagation(); copyToClipboard(data.prompt); });
-            card.querySelector('.delete-video-btn').addEventListener('click', (e) => { e.stopPropagation(); deleteVideo(data.id); });
-            container.appendChild(card);
-        }
-
-        // Utilities
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                // Show brief feedback
-                const toast = document.createElement('div');
-                toast.className = 'fixed bottom-4 right-4 bg-aurora-purple text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in';
-                toast.textContent = 'Copied!';
-                document.body.appendChild(toast);
-                setTimeout(() => toast.remove(), 1500);
-            }).catch(() => alert('Failed to copy'));
-        }
-        async function deleteImage(id) { if (!confirm('Delete this image?')) return; try { const res = await fetch(`/api/images/${id}`, { method: 'DELETE' }); if (res.ok) $(`card-${id}`)?.remove(); } catch (e) { alert('Error'); } }
-        async function deleteVideo(id) { if (!confirm('Delete this video?')) return; try { const res = await fetch(`/api/videos/${id}`, { method: 'DELETE' }); if (res.ok) $(`card-${id}`)?.remove(); } catch (e) { alert('Error'); } }
-    </script>
+    <script src="app-frontend.js"></script>
 </body>
 </html>
