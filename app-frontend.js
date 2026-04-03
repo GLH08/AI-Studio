@@ -233,8 +233,9 @@ function renderPreview(data) {
     const card = document.createElement('div');
     card.className = 'result-card w-full h-full flex flex-col animate-fade-in';
 
+    const videoSrc = isVideo ? `/api/proxy/video?url=${encodeURIComponent(url)}` : url;
     const mediaHtml = isVideo
-        ? `<video controls autoplay class="max-w-full max-h-[400px] rounded-xl shadow-2xl" src="${url}"></video>`
+        ? `<video controls autoplay class="max-w-full max-h-[400px] rounded-xl shadow-2xl" src="${videoSrc}"></video>`
         : `<img src="${url}" alt="Generated" class="max-w-full max-h-[400px] object-contain rounded-xl shadow-2xl cursor-pointer">`;
 
     card.innerHTML = `
@@ -344,8 +345,9 @@ function renderCard(data, container, type) {
     card.className = `group bg-dark-800/50 rounded-2xl border border-white/5 overflow-hidden card-hover cursor-pointer animate-fade-in ${isHidden ? 'card-hidden' : ''}`;
     card.id = `card-${data.id}`;
 
+    const videoSrc = isVideo ? `/api/proxy/video?url=${encodeURIComponent(url)}` : url;
     const mediaHtml = isVideo
-        ? `<div class="relative bg-black card-image">${typeLabel ? `<span class="absolute top-3 left-3 z-10 px-2 py-1 text-[10px] font-bold bg-gradient-to-r from-aurora-purple to-aurora-pink text-white rounded">${typeLabel}</span>` : ''}<video controls preload="metadata" class="w-full aspect-video object-contain" src="${url}"></video></div>`
+        ? `<div class="relative bg-black card-image">${typeLabel ? `<span class="absolute top-3 left-3 z-10 px-2 py-1 text-[10px] font-bold bg-gradient-to-r from-aurora-purple to-aurora-pink text-white rounded">${typeLabel}</span>` : ''}<video controls preload="metadata" class="w-full aspect-video object-contain" src="${videoSrc}"></video></div>`
         : `<div class="aspect-square overflow-hidden bg-dark-900 relative"><img src="${url}" alt="Image" loading="lazy" class="card-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"><div class="card-hidden-badge hidden absolute inset-0 items-center justify-center"><span class="px-3 py-1.5 bg-black/60 rounded-lg text-xs text-zinc-300">Hidden</span></div></div>`;
 
     // Source image info for generated media (I2V or Image-Edit)
@@ -429,7 +431,8 @@ function openLightbox(data) {
     const url = data.displayUrl || data.lskyUrl || data.url;
 
     if (data.isVideo) {
-        mediaContainer.innerHTML = `<video controls autoplay class="max-w-full max-h-[70vh] rounded-t-2xl"><source src="${url}" type="video/mp4"></video>`;
+        const videoSrc = `/api/proxy/video?url=${encodeURIComponent(url)}`;
+        mediaContainer.innerHTML = `<video controls autoplay class="max-w-full max-h-[70vh] rounded-t-2xl"><source src="${videoSrc}" type="video/mp4"></video>`;
     } else {
         mediaContainer.innerHTML = `<img src="${url}" alt="Preview" class="max-w-full max-h-[70vh] object-contain rounded-t-2xl">`;
     }

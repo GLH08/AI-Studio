@@ -966,6 +966,37 @@ app.patch('/api/videos/:id/unhide', (req, res) => {
     res.json({ success: true });
 });
 
+// ==================== Video Proxy (CORS Fix) ====================
+
+app.get('/api/proxy/video', async (req, res) => {
+    const { url } = req.query;
+    if (!url) {
+        return res.status(400).json({ error: 'Missing url parameter' });
+    }
+
+    try {
+        console.log(`[Proxy] Fetching video: ${url}`);
+
+        const videoResponse = await fetch(url);
+
+        if (!videoResponse.ok) {
+            return res.status(videoResponse.status).json({ error: 'Failed to fetch video' });
+        }
+
+        // Set appropriate headers for video content
+        res.setHeader('Content-Type', 'video/mp4');
+        res.setHeader('Content-Length', videoResponse.headers.get('content-length') || '');
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+
+        // Stream the video to the client
+        videoResponse.body.pipe(res);
+    } catch (error) {
+        console.error('[Proxy] Video fetch error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ==================== Image Upload ====================
 
 app.post('/api/upload', async (req, res) => {
