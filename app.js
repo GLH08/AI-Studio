@@ -5,6 +5,7 @@ import bodyParser from 'body-parser';
 import FormData from 'form-data';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -968,7 +969,20 @@ app.patch('/api/videos/:id/unhide', (req, res) => {
     res.json({ success: true });
 });
 
-// ==================== Video Proxy (CORS Fix) ====================
+// ==================== Video Proxy (CORS Fix + Caching) ====================
+
+const VIDEO_CACHE_DIR = path.join(DATA_DIR, 'video-cache');
+
+// Ensure video cache directory exists
+if (!fs.existsSync(VIDEO_CACHE_DIR)) {
+    fs.mkdirSync(VIDEO_CACHE_DIR, { recursive: true });
+}
+
+// Simple URL-to-filename mapping (hash the URL for safe filename)
+function getCachePath(videoUrl) {
+    const hash = crypto.createHash('md5').update(videoUrl).digest('hex');
+    return path.join(VIDEO_CACHE_DIR, `${hash}.mp4`);
+}
 
 app.get('/api/proxy/video', async (req, res) => {
     const { url } = req.query;
@@ -976,8 +990,23 @@ app.get('/api/proxy/video', async (req, res) => {
         return res.status(400).json({ error: 'Missing url parameter' });
     }
 
+    const cachePath = getCachePath(url);
+
+    // Check if video is already cached locally
+    if (fs.existsSync(cachePath)) {
+        console.log(`[Proxy] Serving from cache: ${cachePath}`);
+        const stat = fs.statSync(cachePath);
+        res.setHeader('Content-Type', 'video/mp4');
+        res.setHeader('Content-Length', stat.size);
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        fs.createReadStream(cachePath).pipe(res);
+        return;
+    }
+
+    // Fetch from remote and cache simultaneously
     try {
-        console.log(`[Proxy] Fetching video: ${url}`);
+        console.log(`[Proxy] Fetching and caching video: ${url}`);
 
         const videoResponse = await fetch(url);
 
@@ -985,14 +1014,29 @@ app.get('/api/proxy/video', async (req, res) => {
             return res.status(videoResponse.status).json({ error: 'Failed to fetch video' });
         }
 
-        // Set appropriate headers for video content
+        // Stream to client AND save to cache
         res.setHeader('Content-Type', 'video/mp4');
         res.setHeader('Content-Length', videoResponse.headers.get('content-length') || '');
         res.setHeader('Accept-Ranges', 'bytes');
         res.setHeader('Access-Control-Allow-Origin', '*');
 
-        // Stream the video to the client
+        // Pipe to both response and file system
+        const fileWriteStream = fs.createWriteStream(cachePath);
         videoResponse.body.pipe(res);
+        videoResponse.body.pipe(fileWriteStream);
+
+        videoResponse.body.on('end', () => {
+            console.log(`[Proxy] Video cached: ${cachePath}`);
+        });
+
+        videoResponse.body.on('error', (err) => {
+            console.error('[Proxy] Cache write error:', err);
+            // Clean up partial file
+            if (fs.existsSync(cachePath)) {
+                fs.unlinkSync(cachePath);
+            }
+        });
+
     } catch (error) {
         console.error('[Proxy] Video fetch error:', error);
         res.status(500).json({ error: error.message });
