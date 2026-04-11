@@ -577,6 +577,20 @@ async function callGrok2APIImageEdit(provider, params) {
 /**
  * Video generation via /v1/videos (multipart form-data) + polling
  */
+
+// Map aspect_ratio from frontend to grok2api v2 size format
+const ASPECT_RATIO_TO_SIZE = {
+    '3:2': '1792x1024',   // landscape 3:2
+    '16:9': '1280x720',   // landscape 16:9
+    '9:16': '720x1280',   // portrait 9:16
+    '2:3': '1024x1792',   // portrait 2:3
+    '1:1': '1024x1024'    // square
+};
+
+function convertAspectRatioToSize(aspectRatio) {
+    return ASPECT_RATIO_TO_SIZE[aspectRatio] || '720x1280';
+}
+
 async function callGrok2APIVideo(provider, params) {
     const createUrl = `${provider.baseUrl}/videos`;
     const hasSourceImage = params.sourceImageUrl && params.mode === 'image-to-video';
@@ -592,11 +606,14 @@ async function callGrok2APIVideo(provider, params) {
                 mimeType,
                 data: Buffer.from(imgBuf).toString('base64')
             };
-        } catch (e) {
-            console.error('[Grok2API] Failed to download source image:', e.message);
+        } catch {
+            console.error('[Grok2API] Failed to download source image');
             throw new Error('Failed to download source image for video generation');
         }
     }
+
+    // Convert aspect_ratio to size format for grok2api v2
+    const size = convertAspectRatioToSize(params.videoConfig?.aspect_ratio);
 
     // Build form data for video creation
     const formData = new FormData();
@@ -610,9 +627,9 @@ async function callGrok2APIVideo(provider, params) {
         });
     }
 
-    // Use 'seconds' instead of 'video_length' for grok2api v2
+    // Use 'seconds' parameter for grok2api v2
     formData.append('seconds', parseInt(params.videoConfig?.seconds) || 6);
-    formData.append('size', params.videoConfig?.aspect_ratio || '720x1280');
+    formData.append('size', size);
     formData.append('resolution_name', params.videoConfig?.resolution_name || '720p');
     formData.append('preset', params.videoConfig?.preset || 'custom');
 
