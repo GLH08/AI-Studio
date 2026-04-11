@@ -10,7 +10,7 @@
 - **原生 Grok2API 支持**：深度集成并兼容 Grok2API 的非标多模态及参数（智能处理 Base64 媒体直传、并发控制、多媒体时长/分辨率配置）。
 - **动态多渠道架构**：告别硬编码，支持无限个 `PROVIDER_X_*` 配置项，随时灵活添加不同的 API 渠道。
 - **现代化 UI 面板**：根据所选的渠道和生成模式，参数调节面板（如视频比例、时长选项、参考图强制约束等）会自适应呼出。
-- **Lsky Pro 图床集成**：不仅保障媒体数据在本地 SQLite 安心入库，更支持一键转推私有 Lsky Pro 图床加速多端浏览。
+- **Chevereto 图床集成**：支持一键上传图片和视频到私有 Chevereto 图床，加速多端浏览。
 
 ## 🚀 快速开始
 
@@ -88,13 +88,13 @@ npm start
 - `PROVIDER_X_IMAGE_EDIT_MODELS`：图生图（图像编辑）模型。
 - `PROVIDER_X_VIDEO_MODELS`：视频（文生视频 / 图生视频）模型。
 
-### Lsky Pro 图床配置（选填）
-如果你希望生成的图片能拥有纯公共或加速连结：
+### Chevereto 图床配置（选填）
+如果你希望生成的图片和视频能拥有纯公共或加速连结：
 | 变量 | 说明 |
 |------|------|
-| `LSKY_URL` | Lsky 私有部署的 API 网址（如 `https://image.example.com`） |
-| `LSKY_TOKEN` | Lsky Pro 的接口 token（形如 `Bearer 1|...`） |
-| `LSKY_STRATEGY_ID` | 转存时使用的分发储存策略 ID（默认为 1） |
+| `CHEVERETO_URL` | Chevereto 私有部署的 API 网址（如 `https://image.example.com`） |
+| `CHEVERETO_API_KEY` | Chevereto 的 API Key |
+| `CHEVERETO_ALBUM_ID` | 上传到的相册 ID（可选） |
 
 ## 🔌 API 原生扩展文档
 

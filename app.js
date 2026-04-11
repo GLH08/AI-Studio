@@ -84,15 +84,15 @@ function getProvider(providerId) {
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
-            defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-            imgSrc: ["'self'", "data:", "https:", "http:"],
-            connectSrc: ["'self'", "https:", "http:"],
-            fontSrc: ["'self'", "https:", "http:"],
-            objectSrc: ["'none'"],
-            mediaSrc: ["'self'", "https:", "http:"],
-            frameSrc: ["'self'"]
+            defaultSrc: ['\'self\''],
+            styleSrc: ['\'self\'', '\'unsafe-inline\''],
+            scriptSrc: ['\'self\'', '\'unsafe-inline\'', '\'unsafe-eval\''],
+            imgSrc: ['\'self\'', 'data:', 'https:', 'http:'],
+            connectSrc: ['\'self\'', 'https:', 'http:'],
+            fontSrc: ['\'self\'', 'https:', 'http:'],
+            objectSrc: ['\'none\''],
+            mediaSrc: ['\'self\'', 'https:', 'http:'],
+            frameSrc: ['\'self\'']
         }
     },
     crossOriginEmbedderPolicy: false
@@ -118,7 +118,7 @@ app.use('/api/', limiter);
 
 // Authentication Middleware
 app.use((req, res, next) => {
-    res.setHeader("Content-Security-Policy", "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;");
+    res.setHeader('Content-Security-Policy', 'default-src * \'unsafe-inline\' \'unsafe-eval\' data: blob:;');
 
     if (!AUTH_PASSWORD) return next();
 
@@ -176,7 +176,7 @@ function readDb() {
         if (!data.statistics.videoTotal) data.statistics.videoTotal = 0;
         if (!data.statistics.videoByModel) data.statistics.videoByModel = {};
         return data;
-    } catch (e) {
+    } catch {
         return { images: [], videos: [], statistics: { total: 0, byModel: {}, videoTotal: 0, videoByModel: {} } };
     }
 }
@@ -330,7 +330,7 @@ async function callOpenAICompatible(provider, params) {
                     const delta = parsed.choices?.[0]?.delta?.content ||
                                   parsed.choices?.[0]?.message?.content || '';
                     fullContent += delta;
-                } catch (e) {
+                } catch {
                     // Skip unparseable lines
                 }
             }
@@ -389,7 +389,7 @@ async function callGemini(provider, params) {
             }
         ],
         generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"]
+            responseModalities: ['TEXT', 'IMAGE']
         }
     };
 
@@ -449,63 +449,41 @@ async function callGemini(provider, params) {
 }
 
 /**
- * Grok2API dedicated adapter
+ * Grok2API v2 dedicated adapter
  * Supports: text-to-image, image-edit, text-to-video, image-to-video
- * All via /chat/completions with image_config / video_config
+ * Uses dedicated endpoints: /v1/images/generations, /v1/images/edits, /v1/videos
  */
 async function callGrok2API(provider, params) {
-    const url = `${provider.baseUrl}/chat/completions`;
     const mode = params.mode || 'text-to-image';
     const isVideo = mode === 'text-to-video' || mode === 'image-to-video';
     const isEdit = mode === 'image-edit';
-    const hasSourceImage = params.sourceImageUrl && (isEdit || mode === 'image-to-video');
 
-    let finalSourceUrl = params.sourceImageUrl;
-    // grok2api-1 bug: it fails to upload external URLs for video generation, but works fine with base64 data URIs.
-    if (hasSourceImage && finalSourceUrl.startsWith('http')) {
-        try {
-            const imgRes = await fetch(finalSourceUrl);
-            const imgBuf = await imgRes.arrayBuffer();
-            const mimeType = imgRes.headers.get('content-type') || 'image/jpeg';
-            finalSourceUrl = `data:${mimeType};base64,${Buffer.from(imgBuf).toString('base64')}`;
-        } catch (e) {
-            console.error('[Grok2API] Failed to pre-download source image:', e.message);
-        }
-    }
+    console.log(`[Grok2API] ${mode} → model=${params.model}`);
 
-    // Build messages
-    let messages;
-    if (hasSourceImage) {
-        messages = [{
-            role: 'user',
-            content: [
-                { type: 'text', text: params.prompt },
-                { type: 'image_url', image_url: { url: finalSourceUrl } }
-            ]
-        }];
-    } else {
-        messages = [{ role: 'user', content: params.prompt }];
-    }
-
-    const body = { model: params.model, messages, stream: false };
-
-    // Attach config based on mode
     if (isVideo) {
-        body.video_config = {
-            aspect_ratio: params.videoConfig?.aspect_ratio || '3:2',
-            video_length: parseInt(params.videoConfig?.video_length) || 6,
-            resolution_name: params.videoConfig?.resolution_name || '480p',
-            preset: params.videoConfig?.preset || 'custom'
-        };
+        return await callGrok2APIVideo(provider, params);
+    } else if (isEdit) {
+        return await callGrok2APIImageEdit(provider, params);
     } else {
-        body.image_config = {
-            n: parseInt(params.imageConfig?.n) || 1,
-            size: params.imageConfig?.size || '1024x1024',
-            response_format: 'url'
-        };
+        return await callGrok2APIImageGenerate(provider, params);
     }
+}
 
-    console.log(`[Grok2API] ${mode} → ${url} model=${params.model}`);
+/**
+ * Image generation via /v1/images/generations
+ */
+async function callGrok2APIImageGenerate(provider, params) {
+    const url = `${provider.baseUrl}/v1/images/generations`;
+
+    const body = {
+        model: params.model,
+        prompt: params.prompt,
+        n: parseInt(params.imageConfig?.n) || 1,
+        size: params.imageConfig?.size || '1024x1024',
+        response_format: 'url'
+    };
+
+    console.log(`[Grok2API] Image Generate → ${url} model=${params.model}`);
 
     const response = await fetch(url, {
         method: 'POST',
@@ -518,67 +496,210 @@ async function callGrok2API(provider, params) {
 
     if (!response.ok) {
         const text = await response.text();
-        throw new Error(`Grok2API error ${response.status}: ${text}`);
+        throw new Error(`Grok2API image error ${response.status}: ${text}`);
     }
 
-    // Parse response (handle SSE fallback)
-    const contentType = response.headers.get('content-type') || '';
-    let content = '';
+    const result = await response.json();
 
-    if (contentType.includes('text/event-stream')) {
-        const text = await response.text();
-        for (const line of text.split('\n')) {
-            if (line.startsWith('data: ')) {
-                const data = line.slice(6).trim();
-                if (data === '[DONE]') break;
-                try {
-                    const parsed = JSON.parse(data);
-                    content += parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.message?.content || '';
-                } catch (e) { /* skip */ }
-            }
+    if (!result.data || result.data.length === 0) {
+        throw new Error('No images returned from Grok2API');
+    }
+
+    const urls = result.data.map(item => item.url || item.b64_json);
+    const rawContent = JSON.stringify(result);
+
+    return { url: urls[0], allUrls: urls, rawContent, isVideo: false };
+}
+
+/**
+ * Image edit via /v1/images/edits (multipart form-data)
+ */
+async function callGrok2APIImageEdit(provider, params) {
+    const url = `${provider.baseUrl}/v1/images/edits`;
+
+    // Download source image and convert to base64
+    let sourceImageData = null;
+    if (params.sourceImageUrl) {
+        try {
+            const imgRes = await fetch(params.sourceImageUrl);
+            const imgBuf = await imgRes.arrayBuffer();
+            const mimeType = imgRes.headers.get('content-type') || 'image/jpeg';
+            sourceImageData = {
+                mimeType,
+                base64: Buffer.from(imgBuf).toString('base64')
+            };
+        } catch (e) {
+            console.error('[Grok2API] Failed to download source image:', e.message);
+            throw new Error('Failed to download source image for editing');
         }
     } else {
-        const result = await response.json();
-        content = result.choices?.[0]?.message?.content || '';
+        throw new Error('Image edit requires a source image');
     }
 
-    if (!content) throw new Error('No content in Grok2API response');
+    const formData = new FormData();
+    formData.append('model', params.model);
+    formData.append('prompt', params.prompt);
+    formData.append('image', Buffer.from(sourceImageData.base64, 'base64'), {
+        filename: 'source.png',
+        contentType: sourceImageData.mimeType
+    });
+    formData.append('n', parseInt(params.imageConfig?.n) || 1);
+    formData.append('size', params.imageConfig?.size || '1024x1024');
+    formData.append('response_format', 'url');
 
-    console.log(`[Grok2API] Response length: ${content.length}`);
+    console.log(`[Grok2API] Image Edit → ${url} model=${params.model}`);
 
-    // Extract media URLs
-    const markdownRegex = /!\[.*?\]\((https?:\/\/[^\s)]+)\)/g;
-    const mediaUrlRegex = /(https?:\/\/[^\s"'<>]+\.(?:png|jpg|jpeg|gif|webp|bmp|svg|mp4|webm|mov)(?:\?[^\s"'<>]*)?)/gi;
-    let urls = [];
-    let match;
-    
-    // 1. Try to find markdown images/videos
-    while ((match = markdownRegex.exec(content)) !== null) urls.push(match[1]);
-    
-    // 2. If nothing found, parse raw URLs
-    if (urls.length === 0) {
-        while ((match = mediaUrlRegex.exec(content)) !== null) urls.push(match[0]);
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${provider.apiKey}`
+        },
+        body: formData
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Grok2API image edit error ${response.status}: ${text}`);
     }
 
-    // 3. Deduplicate exact same URLs
-    urls = [...new Set(urls)];
+    const result = await response.json();
 
-    if (urls.length === 0) {
-        // Grok occasionally returns an error message as the content instead of an image link.
-        const cleanMsg = content.length < 200 ? content : content.substring(0, 200) + '...';
-        throw new Error(cleanMsg);
+    if (!result.data || result.data.length === 0) {
+        throw new Error('No images returned from Grok2API edit');
     }
 
-    // 4. Filter by requested media type to avoid mixed results (e.g., getting a cover image and a video for a video prompt)
-    if (isVideo) {
-        const videoUrls = urls.filter(u => /\.(mp4|webm|mov)(\?|$)/i.test(u));
-        if (videoUrls.length > 0) urls = videoUrls; // strict filter if we found true videos
-    } else {
-        const imageUrls = urls.filter(u => !/\.(mp4|webm|mov)(\?|$)/i.test(u));
-        if (imageUrls.length > 0) urls = imageUrls; // strict filter if we found true images
+    const urls = result.data.map(item => item.url || item.b64_json);
+    const rawContent = JSON.stringify(result);
+
+    return { url: urls[0], allUrls: urls, rawContent, isVideo: false };
+}
+
+/**
+ * Video generation via /v1/videos (multipart form-data) + polling
+ */
+async function callGrok2APIVideo(provider, params) {
+    const createUrl = `${provider.baseUrl}/v1/videos`;
+    const hasSourceImage = params.sourceImageUrl && params.mode === 'image-to-video';
+
+    // Prepare source image for image-to-video
+    let sourceImageBase64 = null;
+    if (hasSourceImage && params.sourceImageUrl) {
+        try {
+            const imgRes = await fetch(params.sourceImageUrl);
+            const imgBuf = await imgRes.arrayBuffer();
+            const mimeType = imgRes.headers.get('content-type') || 'image/jpeg';
+            sourceImageBase64 = {
+                mimeType,
+                data: Buffer.from(imgBuf).toString('base64')
+            };
+        } catch (e) {
+            console.error('[Grok2API] Failed to download source image:', e.message);
+            throw new Error('Failed to download source image for video generation');
+        }
     }
 
-    return { url: urls[0], allUrls: urls, rawContent: content, isVideo };
+    // Build form data for video creation
+    const formData = new FormData();
+    formData.append('model', params.model);
+    formData.append('prompt', params.prompt);
+
+    if (hasSourceImage && sourceImageBase64) {
+        formData.append('image', Buffer.from(sourceImageBase64.data, 'base64'), {
+            filename: 'source.png',
+            contentType: sourceImageBase64.mimeType
+        });
+    }
+
+    // Use 'seconds' instead of 'video_length' for grok2api v2
+    formData.append('seconds', parseInt(params.videoConfig?.seconds) || 6);
+    formData.append('size', params.videoConfig?.aspect_ratio || '720x1280');
+    formData.append('resolution_name', params.videoConfig?.resolution_name || '720p');
+    formData.append('preset', params.videoConfig?.preset || 'custom');
+
+    console.log(`[Grok2API] Video Create → ${createUrl} model=${params.model}`);
+
+    const createResponse = await fetch(createUrl, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${provider.apiKey}`
+        },
+        body: formData
+    });
+
+    if (!createResponse.ok) {
+        const text = await createResponse.text();
+        throw new Error(`Grok2API video error ${createResponse.status}: ${text}`);
+    }
+
+    const job = await createResponse.json();
+
+    if (!job.id) {
+        throw new Error('No video job ID returned');
+    }
+
+    console.log(`[Grok2API] Video job created: ${job.id}, polling for completion...`);
+
+    // Poll for video completion
+    const videoUrl = await pollVideoCompletion(provider, job.id);
+
+    return {
+        url: videoUrl,
+        allUrls: [videoUrl],
+        rawContent: JSON.stringify(job),
+        isVideo: true
+    };
+}
+
+/**
+ * Poll video job status until completed
+ */
+async function pollVideoCompletion(provider, videoId, maxAttempts = 60, intervalMs = 3000) {
+    const statusUrl = `${provider.baseUrl}/v1/videos/${videoId}`;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        console.log(`[Grok2API] Polling video status: ${videoId} (attempt ${attempt + 1}/${maxAttempts})`);
+
+        const response = await fetch(statusUrl, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${provider.apiKey}`
+            }
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Grok2API video status error ${response.status}: ${text}`);
+        }
+
+        const job = await response.json();
+
+        if (job.status === 'completed') {
+            // Get video content URL
+            const contentUrl = `${provider.baseUrl}/v1/videos/${videoId}/content`;
+            console.log(`[Grok2API] Video completed: ${videoId}, content URL: ${contentUrl}`);
+            return contentUrl;
+        }
+
+        if (job.status === 'failed') {
+            throw new Error(`Video generation failed: ${job.error?.message || 'Unknown error'}`);
+        }
+
+        if (job.status === 'in_progress' || job.status === 'queued') {
+            console.log(`[Grok2API] Video ${job.status}, progress: ${job.progress || 0}%`);
+            await sleep(intervalMs);
+            continue;
+        }
+
+        // Unknown status, wait and retry
+        console.log(`[Grok2API] Unknown video status: ${job.status}, retrying...`);
+        await sleep(intervalMs);
+    }
+
+    throw new Error(`Video generation timeout after ${maxAttempts} attempts`);
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
@@ -599,59 +720,65 @@ async function callProvider(provider, params) {
     }
 }
 
-// ==================== Lsky Pro Upload Helper ====================
+// ==================== Chevereto Upload Helper ====================
 
-async function uploadToLsky(imageUrl) {
-    const lskyUrl = process.env.LSKY_URL;
-    const lskyToken = process.env.LSKY_TOKEN;
-    const strategyId = process.env.LSKY_STRATEGY_ID || '1';
+async function uploadToChevereto(fileUrl, isVideo = false) {
+    const cheveretoUrl = process.env.CHEVERETO_URL;
+    const apiKey = process.env.CHEVERETO_API_KEY;
+    const albumId = process.env.CHEVERETO_ALBUM_ID;
 
-    if (!lskyUrl || !lskyToken) return null;
+    if (!cheveretoUrl || !apiKey) {
+        console.log('Chevereto not configured, skipping upload');
+        return null;
+    }
 
-    // Skip data: URLs for Lsky upload
-    if (imageUrl.startsWith('data:')) {
-        console.log('Skipping Lsky upload for base64 data URL');
+    // Skip data: URLs
+    if (fileUrl.startsWith('data:')) {
+        console.log('Skipping Chevereto upload for base64 data URL');
         return null;
     }
 
     try {
-        console.log(`Downloading image from: ${imageUrl}`);
-        const imageResponse = await fetch(imageUrl);
-        if (!imageResponse.ok) throw new Error(`Failed to download image. Status: ${imageResponse.status}`);
+        console.log(`Downloading file from: ${fileUrl}`);
+        const response = await fetch(fileUrl);
+        if (!response.ok) throw new Error(`Failed to download file. Status: ${response.status}`);
 
-        const arrayBuffer = await imageResponse.arrayBuffer();
+        const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
         const formData = new FormData();
-        formData.append('file', buffer, { filename: 'generated-image.png', contentType: 'image/png' });
-        formData.append('strategy_id', strategyId);
+        const filename = isVideo ? 'video.mp4' : 'image.png';
+        const mimeType = isVideo ? 'video/mp4' : 'image/png';
+        formData.append('source', new Blob([buffer], { type: mimeType }), filename);
+        if (albumId) {
+            formData.append('album_id', albumId);
+        }
 
-        const apiUrl = lskyUrl.replace(/\/$/, '') + '/api/v1/upload';
-        console.log(`Uploading to Lsky: ${apiUrl}`);
+        const apiUrl = cheveretoUrl.replace(/\/$/, '') + '/api/1/upload';
+        console.log(`Uploading to Chevereto: ${apiUrl}`);
 
         const uploadResponse = await fetch(apiUrl, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${lskyToken}`,
-                ...formData.getHeaders()
+                'X-API-Key': apiKey
             },
             body: formData
         });
 
         if (!uploadResponse.ok) {
             const errorText = await uploadResponse.text();
-            throw new Error(`Lsky Pro API returned status ${uploadResponse.status}: ${errorText}`);
+            throw new Error(`Chevereto API returned status ${uploadResponse.status}: ${errorText}`);
         }
 
         const result = await uploadResponse.json();
-        if (result.status === true && result.data?.links?.url) {
-            console.log('✅ Lsky Pro upload successful. New URL:', result.data.links.url);
-            return result.data.links.url;
+        if (result.status_code === 200 && result.image?.url) {
+            console.log('✅ Chevereto upload successful. New URL:', result.image.url);
+            return result.image.url;
         } else {
-            throw new Error(`Lsky Pro returned an error: ${result.message || 'Unknown error'}`);
+            throw new Error(`Chevereto returned an error: ${result.status_txt || 'Unknown error'}`);
         }
     } catch (error) {
-        console.error('Lsky Pro upload failed:', error.message);
+        console.error('Chevereto upload failed:', error.message);
         return null;
     }
 }
@@ -715,17 +842,19 @@ app.post('/api/generate', async (req, res) => {
         const records = [];
 
         for (const mediaUrl of allUrls) {
-            // Try Lsky upload (skip for videos)
-            let lskyUrl = null;
-            if (!isVideoResult && process.env.LSKY_URL && process.env.LSKY_TOKEN) {
-                try { lskyUrl = await uploadToLsky(mediaUrl); } catch (e) { console.error('Lsky failed', e); }
+            // Upload to Chevereto
+            let cheveretoUrl = null;
+            try {
+                cheveretoUrl = await uploadToChevereto(mediaUrl, isVideoResult);
+            } catch (e) {
+                console.error('Chevereto upload failed', e);
             }
 
             const id = (isVideoResult ? 'video-gen-' : 'gen-') + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 
             if (isVideoResult) {
                 const videoRecord = {
-                    id, url: mediaUrl, prompt, model,
+                    id, url: cheveretoUrl || mediaUrl, prompt, model,
                     provider: provider.name, providerType: provider.type,
                     sourceImageUrl: sourceImageUrl || null,
                     aspectRatio: videoConfig?.aspect_ratio || null,
@@ -736,7 +865,7 @@ app.post('/api/generate', async (req, res) => {
                 records.push(videoRecord);
             } else {
                 const imageRecord = {
-                    id, url: mediaUrl, lskyUrl,
+                    id, url: cheveretoUrl || mediaUrl,
                     prompt, model,
                     provider: provider.name, providerType: provider.type,
                     size: imageConfig?.size || size || null,
@@ -779,7 +908,7 @@ app.post('/api/images/manual', (req, res) => {
 
     try {
         new URL(url);
-    } catch (e) {
+    } catch {
         return res.status(400).json({ error: 'Invalid URL format.' });
     }
 
@@ -788,7 +917,6 @@ app.post('/api/images/manual', (req, res) => {
     const imageRecord = {
         id: id,
         url: url,
-        lskyUrl: null,
         prompt: prompt,
         model: model || 'Manual',
         aspectRatio: aspectRatio || 'Unknown',
@@ -864,7 +992,7 @@ app.post('/api/videos/text-to-video', (req, res) => {
 
     try {
         new URL(url);
-    } catch (e) {
+    } catch {
         return res.status(400).json({ error: 'Invalid video URL format.' });
     }
 
@@ -895,13 +1023,13 @@ app.post('/api/videos/image-to-video', (req, res) => {
 
     try {
         new URL(url);
-    } catch (e) {
+    } catch {
         return res.status(400).json({ error: 'Invalid video URL format.' });
     }
 
     try {
         new URL(sourceImageUrl);
-    } catch (e) {
+    } catch {
         return res.status(400).json({ error: 'Invalid source image URL format.' });
     }
 
@@ -1072,7 +1200,7 @@ app.listen(PORT, () => {
     console.log('==============================================');
     console.log(`📍 Server running on http://localhost:${PORT}`);
     console.log(`🔐 Authentication: ${AUTH_PASSWORD ? '✅ Enabled' : '⚠️ Disabled'}`);
-    console.log(`☁️  Lsky Pro: ${process.env.LSKY_URL ? '✅ Configured' : '⚠️ Disabled'}`);
+    console.log(`☁️  Chevereto: ${process.env.CHEVERETO_URL ? '✅ Configured' : '⚠️ Disabled'}`);
     console.log('==============================================');
     if (PROVIDERS.length === 0) {
         console.log('⚠️  No providers configured! Set PROVIDER_N_* environment variables.');
