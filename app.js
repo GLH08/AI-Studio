@@ -473,7 +473,7 @@ async function callGrok2API(provider, params) {
  * Image generation via /v1/images/generations
  */
 async function callGrok2APIImageGenerate(provider, params) {
-    const url = `${provider.baseUrl}/v1/images/generations`;
+    const url = `${provider.baseUrl}/images/generations`;
 
     const body = {
         model: params.model,
@@ -515,7 +515,7 @@ async function callGrok2APIImageGenerate(provider, params) {
  * Image edit via /v1/images/edits (multipart form-data)
  */
 async function callGrok2APIImageEdit(provider, params) {
-    const url = `${provider.baseUrl}/v1/images/edits`;
+    const url = `${provider.baseUrl}/images/edits`;
 
     // Download source image and convert to base64
     let sourceImageData = null;
@@ -578,7 +578,7 @@ async function callGrok2APIImageEdit(provider, params) {
  * Video generation via /v1/videos (multipart form-data) + polling
  */
 async function callGrok2APIVideo(provider, params) {
-    const createUrl = `${provider.baseUrl}/v1/videos`;
+    const createUrl = `${provider.baseUrl}/videos`;
     const hasSourceImage = params.sourceImageUrl && params.mode === 'image-to-video';
 
     // Prepare source image for image-to-video
@@ -654,7 +654,7 @@ async function callGrok2APIVideo(provider, params) {
  * Poll video job status until completed
  */
 async function pollVideoCompletion(provider, videoId, maxAttempts = 60, intervalMs = 3000) {
-    const statusUrl = `${provider.baseUrl}/v1/videos/${videoId}`;
+    const statusUrl = `${provider.baseUrl}/videos/${videoId}`;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
         console.log(`[Grok2API] Polling video status: ${videoId} (attempt ${attempt + 1}/${maxAttempts})`);
@@ -675,7 +675,7 @@ async function pollVideoCompletion(provider, videoId, maxAttempts = 60, interval
 
         if (job.status === 'completed') {
             // Get video content URL
-            const contentUrl = `${provider.baseUrl}/v1/videos/${videoId}/content`;
+            const contentUrl = `${provider.baseUrl}/videos/${videoId}/content`;
             console.log(`[Grok2API] Video completed: ${videoId}, content URL: ${contentUrl}`);
             return contentUrl;
         }
