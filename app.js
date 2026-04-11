@@ -767,8 +767,8 @@ async function uploadToChevereto(fileUrl, isVideo = false, providerApiKey = null
         const response = await fetch(fileUrl, { headers });
         if (!response.ok) throw new Error(`Failed to download file. Status: ${response.status}`);
 
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
+        // Use response.buffer() for Node.js to get Buffer directly
+        const buffer = await response.buffer();
 
         const formData = new FormData();
         const filename = isVideo ? 'video.mp4' : 'image.png';
