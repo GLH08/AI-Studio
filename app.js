@@ -222,9 +222,9 @@ function addImageToDb(image) {
         }
 
         db.images.unshift(image);
+        writeDb(db);
         db.statistics.total = (db.statistics.total || 0) + 1;
         db.statistics.byModel[image.model] = (db.statistics.byModel[image.model] || 0) + 1;
-        writeDb(db);
         console.log(`✅ Image saved to database: ${image.model} (Total: ${db.statistics.total})`);
     } catch (error) {
         console.error('❌ Failed to save image to database:', error);
@@ -239,9 +239,9 @@ function addVideoToDb(video) {
         if (!db.statistics.videoByModel) db.statistics.videoByModel = {};
 
         db.videos.unshift(video);
+        writeDb(db);
         db.statistics.videoTotal = (db.statistics.videoTotal || 0) + 1;
         db.statistics.videoByModel[video.model] = (db.statistics.videoByModel[video.model] || 0) + 1;
-        writeDb(db);
         console.log(`✅ Video saved to database: ${video.model} (Total: ${db.statistics.videoTotal})`);
     } catch (error) {
         console.error('❌ Failed to save video to database:', error);
