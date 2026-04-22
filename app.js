@@ -893,8 +893,9 @@ app.post('/api/generate', async (req, res) => {
             const id = (isVideoResult ? 'video-gen-' : 'gen-') + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 
             if (isVideoResult) {
-                // For videos: use Chevereto URL if available, otherwise use local proxy URL
-                const videoUrl = cheveretoUrl || `/api/proxy/video?url=${encodeURIComponent(mediaUrl)}`;
+                // For videos: store Chevereto URL if available, otherwise store original URL
+                // The frontend will wrap with proxy for playback via /api/proxy/video
+                const videoUrl = cheveretoUrl || mediaUrl;
                 const videoRecord = {
                     id, url: videoUrl, prompt, model,
                     provider: provider.name, providerType: provider.type,
