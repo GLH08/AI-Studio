@@ -22,6 +22,20 @@ const AUTH_PASSWORD = process.env.AUTH_PASSWORD;
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 
+// Image proxy whitelist (comma-separated domains)
+const IMAGE_PROXY_WHITELIST = (process.env.IMAGE_PROXY_WHITELIST || '').split(',').map(d => d.trim()).filter(Boolean);
+
+// Image MIME types constant
+const IMAGE_MIME_TYPES = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.bmp': 'image/bmp',
+    '.svg': 'image/svg+xml'
+};
+
 // Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -1212,17 +1226,51 @@ app.get('/api/proxy/video', async (req, res) => {
 
 // ==================== Image Proxy (CORS Fix + Caching) ====================
 
+const IMAGE_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+// Clean up old cached images on startup
+function cleanImageCache() {
+    try {
+        const now = Date.now();
+        const files = fs.readdirSync(IMAGE_CACHE_DIR);
+        let cleaned = 0;
+        let cleanedBytes = 0;
+        for (const file of files) {
+            const filePath = path.join(IMAGE_CACHE_DIR, file);
+            const stat = fs.statSync(filePath);
+            if (now - stat.mtimeMs > IMAGE_CACHE_MAX_AGE_MS) {
+                cleanedBytes += stat.size;
+                fs.unlinkSync(filePath);
+                cleaned++;
+            }
+        }
+        if (cleaned > 0) {
+            console.log(`[Proxy] Cleaned ${cleaned} old cached images (${(cleanedBytes / 1024 / 1024).toFixed(2)} MB)`);
+        }
+    } catch (err) {
+        console.error('[Proxy] Cache cleanup error:', err.message);
+    }
+}
+cleanImageCache();
+
 app.get('/api/proxy/image', async (req, res) => {
     const { url } = req.query;
     if (!url) {
         return res.status(400).json({ error: 'Missing url parameter' });
     }
 
-    // Validate URL
+    // Validate URL format
+    let parsedUrl;
     try {
-        new URL(url);
+        parsedUrl = new URL(url);
     } catch {
         return res.status(400).json({ error: 'Invalid url parameter' });
+    }
+
+    // SSRF protection: check hostname against whitelist
+    if (IMAGE_PROXY_WHITELIST.length > 0 && !IMAGE_PROXY_WHITELIST.includes(parsedUrl.hostname)) {
+        console.warn(`[Proxy] Blocked request to non-whitelisted domain: ${parsedUrl.hostname}`);
+        return res.status(403).json({ error: 'Domain not allowed' });
     }
 
     const cachePath = getImageCachePath(url);
@@ -1232,16 +1280,7 @@ app.get('/api/proxy/image', async (req, res) => {
         console.log(`[Proxy] Serving image from cache: ${cachePath}`);
         const stat = fs.statSync(cachePath);
         const ext = path.extname(cachePath).toLowerCase();
-        const mimeTypes = {
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.png': 'image/png',
-            '.gif': 'image/gif',
-            '.webp': 'image/webp',
-            '.bmp': 'image/bmp',
-            '.svg': 'image/svg+xml'
-        };
-        res.setHeader('Content-Type', mimeTypes[ext] || 'image/jpeg');
+        res.setHeader('Content-Type', IMAGE_MIME_TYPES[ext] || 'image/jpeg');
         res.setHeader('Content-Length', stat.size);
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         res.setHeader('Access-Control-Allow-Origin', '*');
@@ -1249,39 +1288,55 @@ app.get('/api/proxy/image', async (req, res) => {
         return;
     }
 
-    // Fetch from remote and cache
+    // Fetch from remote and cache (streaming to avoid memory issues)
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
     try {
         console.log(`[Proxy] Fetching and caching image: ${url}`);
 
-        const imageResponse = await fetch(url);
+        const imageResponse = await fetch(url, { signal: controller.signal });
+
+        clearTimeout(timeout);
 
         if (!imageResponse.ok) {
             return res.status(imageResponse.status).json({ error: 'Failed to fetch image' });
         }
 
-        const buffer = await imageResponse.buffer();
-        const ext = path.extname(new URL(url).pathname) || '.jpg';
-        const finalCachePath = getImageCachePath(url);
+        const ext = path.extname(parsedUrl.pathname) || '.jpg';
+        const contentLength = imageResponse.headers.get('content-length');
 
-        fs.writeFileSync(finalCachePath, buffer);
-
-        const mimeTypes = {
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.png': 'image/png',
-            '.gif': 'image/gif',
-            '.webp': 'image/webp',
-            '.bmp': 'image/bmp',
-            '.svg': 'image/svg+xml'
-        };
-        res.setHeader('Content-Type', mimeTypes[ext] || 'image/jpeg');
-        res.setHeader('Content-Length', buffer.length);
+        res.setHeader('Content-Type', IMAGE_MIME_TYPES[ext] || 'image/jpeg');
+        if (contentLength) res.setHeader('Content-Length', contentLength);
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         res.setHeader('Access-Control-Allow-Origin', '*');
-        res.end(buffer);
+
+        // Stream to both response and file system
+        const fileWriteStream = fs.createWriteStream(cachePath);
+        imageResponse.body.pipe(res);
+        imageResponse.body.pipe(fileWriteStream);
+
+        imageResponse.body.on('end', () => {
+            console.log(`[Proxy] Image cached: ${cachePath}`);
+        });
+
+        imageResponse.body.on('error', (err) => {
+            console.error('[Proxy] Cache write error:', err.message);
+            if (fs.existsSync(cachePath)) {
+                fs.unlinkSync(cachePath);
+            }
+        });
 
     } catch (error) {
-        console.error('[Proxy] Image fetch error:', error);
+        clearTimeout(timeout);
+        if (error.name === 'AbortError') {
+            console.error(`[Proxy] Image fetch timeout: ${url}`);
+            return res.status(504).json({ error: 'Fetch timeout' });
+        }
+        console.error('[Proxy] Image fetch error:', error.message);
+        if (fs.existsSync(cachePath)) {
+            fs.unlinkSync(cachePath);
+        }
         res.status(500).json({ error: error.message });
     }
 });

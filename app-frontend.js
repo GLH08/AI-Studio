@@ -9,7 +9,7 @@ let currentMode = 'text-to-image';
 
 // ==================== Image Proxy Helper ====================
 function getImageProxyUrl(url) {
-    if (!url) return url;
+    if (!url) return '';
     // If already a proxy URL or data URI, use as-is
     if (url.startsWith('/api/proxy/') || url.startsWith('data:')) return url;
     // Otherwise wrap with image proxy

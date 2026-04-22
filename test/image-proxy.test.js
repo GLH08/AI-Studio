@@ -1,7 +1,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
-import path from 'node:path';
+import path from 'path';
 import crypto from 'node:crypto';
 
 // Test the image proxy endpoint logic directly
@@ -49,7 +49,6 @@ describe('Image Proxy Logic', () => {
 
     describe('IMAGE_CACHE_DIR setup', () => {
         it('image-cache directory should be created', () => {
-            // This test verifies the directory creation logic
             if (!fs.existsSync(IMAGE_CACHE_DIR)) {
                 fs.mkdirSync(IMAGE_CACHE_DIR, { recursive: true });
             }
@@ -59,9 +58,6 @@ describe('Image Proxy Logic', () => {
 });
 
 describe('Image Proxy Endpoint', () => {
-    // Integration test would require starting the server
-    // For now we test the URL transformation logic used by frontend
-
     it('should transform Chevereto URL to proxy format', () => {
         const originalUrl = 'https://chevereto.novaw.de/images/2026/04/11/test.jpg';
         const proxyUrl = `/api/proxy/image?url=${encodeURIComponent(originalUrl)}`;
@@ -75,6 +71,81 @@ describe('Image Proxy Endpoint', () => {
         const encoded = encodeURIComponent(originalUrl);
         const proxyUrl = `/api/proxy/image?url=${encoded}`;
 
-        assert.ok(proxyUrl.includes('v%3D123')); // encoded '?v=123'
+        assert.ok(proxyUrl.includes('v%3D123'));
+    });
+});
+
+describe('SSRF Protection - Domain Whitelist', () => {
+    function isUrlAllowed(url, whitelist) {
+        try {
+            const parsedUrl = new URL(url);
+            if (whitelist.length === 0) return true;
+            return whitelist.includes(parsedUrl.hostname);
+        } catch {
+            return false;
+        }
+    }
+
+    const whitelist = ['chevereto.novaw.de', 'images.example.com'];
+
+    it('should allow whitelisted domain', () => {
+        assert.strictEqual(isUrlAllowed('https://chevereto.novaw.de/image.jpg', whitelist), true);
+    });
+
+    it('should allow another whitelisted domain', () => {
+        assert.strictEqual(isUrlAllowed('https://images.example.com/image.jpg', whitelist), true);
+    });
+
+    it('should block non-whitelisted domain', () => {
+        assert.strictEqual(isUrlAllowed('https://evil.com/image.jpg', whitelist), false);
+    });
+
+    it('should block internal network addresses', () => {
+        assert.strictEqual(isUrlAllowed('http://localhost:6379/image.jpg', whitelist), false);
+        assert.strictEqual(isUrlAllowed('http://192.168.1.1/image.jpg', whitelist), false);
+        assert.strictEqual(isUrlAllowed('http://10.0.0.1/image.jpg', whitelist), false);
+    });
+
+    it('should allow any domain when whitelist is empty', () => {
+        assert.strictEqual(isUrlAllowed('https://anydomain.com/image.jpg', []), true);
+    });
+
+    it('should reject invalid URLs', () => {
+        assert.strictEqual(isUrlAllowed('not-a-url', whitelist), false);
+    });
+});
+
+describe('getImageProxyUrl Frontend Helper', () => {
+    function getImageProxyUrl(url) {
+        if (!url) return '';
+        if (url.startsWith('/api/proxy/') || url.startsWith('data:')) return url;
+        return `/api/proxy/image?url=${encodeURIComponent(url)}`;
+    }
+
+    it('should return empty string for null', () => {
+        assert.strictEqual(getImageProxyUrl(null), '');
+    });
+
+    it('should return empty string for undefined', () => {
+        assert.strictEqual(getImageProxyUrl(undefined), '');
+    });
+
+    it('should return empty string for empty string', () => {
+        assert.strictEqual(getImageProxyUrl(''), '');
+    });
+
+    it('should return proxy URL for valid external URL', () => {
+        const result = getImageProxyUrl('https://chevereto.novaw.de/image.jpg');
+        assert.ok(result.startsWith('/api/proxy/image?url='));
+    });
+
+    it('should return as-is for already proxied URL', () => {
+        const proxyUrl = '/api/proxy/image?url=https://example.com/image.jpg';
+        assert.strictEqual(getImageProxyUrl(proxyUrl), proxyUrl);
+    });
+
+    it('should return as-is for data URI', () => {
+        const dataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+        assert.strictEqual(getImageProxyUrl(dataUri), dataUri);
     });
 });
