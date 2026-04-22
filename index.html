@@ -192,9 +192,25 @@
         /* ===== Animations ===== */
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .animate-fade-in { animation: fadeIn 0.4s ease-out; }
         .animate-spin { animation: spin 1s linear infinite; }
+        .animate-pulse { animation: pulse 2s ease-in-out infinite; }
         @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+
+        /* ===== Aurora Color Fallbacks (for app-frontend.js) ===== */
+        .bg-aurora-purple { background-color: #8B5CF6; }
+        .bg-aurora-pink { background-color: #EC4899; }
+        .bg-aurora-cyan { background-color: #06B6D4; }
+        .bg-aurora-blue { background-color: #3B82F6; }
+        .text-aurora-purple { color: #8B5CF6; }
+        .text-aurora-pink { color: #EC4899; }
+        .text-aurora-cyan { color: #06B6D4; }
+        .text-aurora-blue { color: #3B82F6; }
+        .border-aurora-purple { border-color: #8B5CF6; }
+        .border-aurora-pink { border-color: #EC4899; }
+        .border-aurora-cyan { border-color: #06B6D4; }
+        .border-aurora-blue { border-color: #3B82F6; }
 
         /* ===== Responsive Sidebar ===== */
         @media (max-width: 1024px) {
@@ -227,6 +243,40 @@
         }
         .nav-btn i { width: 20px; height: 20px; }
 
+        /* ===== Mode Button ===== */
+        .mode-btn {
+            background: transparent;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+        .mode-btn:hover {
+            background: var(--glass-bg-hover);
+            color: var(--text-primary);
+        }
+        .mode-btn.active {
+            background: linear-gradient(135deg, #007AFF 0%, #BF5AF2 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+        }
+
+        /* ===== Glass Card (for app-frontend.js) ===== */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            box-shadow: var(--shadow-glass);
+            transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+            overflow: hidden;
+        }
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border-color: var(--glass-border-strong);
+        }
+
         /* ===== Card Hover Effect ===== */
         .card-hover {
             transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
@@ -239,6 +289,37 @@
         /* ===== Hidden State ===== */
         .card-hidden .card-image { filter: blur(20px) brightness(0.5); }
         .card-hidden .card-hidden-badge { display: flex; }
+
+        /* ===== Action Button (in cards) ===== */
+        .action-btn {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+        .action-btn:hover {
+            background: var(--glass-bg-hover);
+            border-color: var(--glass-border-strong);
+        }
+
+        /* ===== Toast Notification ===== */
+        .toast {
+            background: var(--glass-bg);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            box-shadow: var(--shadow-glass);
+            color: var(--text-primary);
+        }
+
+        /* ===== Spinner ===== */
+        .spinner {
+            border: 3px solid rgba(0, 122, 255, 0.15);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+        }
     </style>
 </head>
 <body class="font-sans min-h-screen overflow-x-hidden">

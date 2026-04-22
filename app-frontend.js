@@ -81,11 +81,7 @@ function onProviderChange() {
 function setMode(mode) {
     currentMode = mode;
     document.querySelectorAll('.mode-btn').forEach(btn => {
-        btn.classList.toggle('bg-gradient-to-r', btn.dataset.mode === mode);
-        btn.classList.toggle('from-aurora-purple', btn.dataset.mode === mode);
-        btn.classList.toggle('to-aurora-pink', btn.dataset.mode === mode);
-        btn.classList.toggle('text-white', btn.dataset.mode === mode);
-        btn.classList.toggle('text-zinc-400', btn.dataset.mode !== mode);
+        btn.classList.toggle('active', btn.dataset.mode === mode);
     });
     updateModels();
     updateControls();
@@ -241,29 +237,33 @@ function renderPreview(data) {
     const isVideo = data.type === 'text-to-video' || data.type === 'image-to-video' || /\.(mp4|webm)(\?|$)/i.test(url);
     const imageSrc = getImageProxyUrl(url);
     const card = document.createElement('div');
-    card.className = 'result-card w-full h-full flex flex-col animate-fade-in';
+    card.className = 'result-card glass-card w-full h-full flex flex-col animate-fade-in';
 
     // For videos: if URL is already a proxy URL, use it directly; otherwise wrap with proxy
     const videoSrc = isVideo ? (url.startsWith('/api/proxy') ? url : `/api/proxy/video?url=${encodeURIComponent(url)}`) : url;
     const mediaHtml = isVideo
-        ? `<video controls autoplay class="max-w-full max-h-[400px] rounded-xl shadow-2xl" src="${videoSrc}"></video>`
-        : `<img src="${imageSrc}" alt="Generated" class="max-w-full max-h-[400px] object-contain rounded-xl shadow-2xl cursor-pointer">`;
+        ? `<video controls autoplay class="max-w-full max-h-[400px] rounded-xl" style="box-shadow: var(--shadow-glass);" src="${videoSrc}"></video>`
+        : `<img src="${imageSrc}" alt="Generated" class="max-w-full max-h-[400px] object-contain rounded-xl cursor-pointer" style="box-shadow: var(--shadow-glass);">`;
 
     // "Open" should link to original URL, not proxy
     card.innerHTML = `
-        <div class="flex-1 flex items-center justify-center p-4 bg-dark-900/50">
+        <div class="flex-1 flex items-center justify-center p-6" style="background: var(--bg-primary);">
             ${mediaHtml}
         </div>
-        <div class="p-4 border-t border-white/5 space-y-3">
+        <div class="p-5 space-y-3" style="border-top: 1px solid var(--glass-border);">
             <div class="flex flex-wrap gap-2">
-                <span class="px-3 py-1 text-xs font-medium bg-aurora-purple/20 text-aurora-purple rounded-full">${escapeHtml(data.model)}</span>
-                ${data.provider ? `<span class="px-3 py-1 text-xs font-medium bg-aurora-cyan/20 text-aurora-cyan rounded-full">${escapeHtml(data.provider)}</span>` : ''}
-                ${isVideo ? '<span class="px-3 py-1 text-xs font-medium bg-aurora-pink/20 text-aurora-pink rounded-full">Video</span>' : ''}
+                <span class="px-3 py-1 text-xs font-medium rounded-full" style="background: rgba(139,92,246,0.2); color: #8B5CF6;">${escapeHtml(data.model)}</span>
+                ${data.provider ? `<span class="px-3 py-1 text-xs font-medium rounded-full" style="background: rgba(6,182,212,0.2); color: #06B6D4;">${escapeHtml(data.provider)}</span>` : ''}
+                ${isVideo ? '<span class="px-3 py-1 text-xs font-medium rounded-full" style="background: rgba(236,72,153,0.2); color: #EC4899;">Video</span>' : ''}
             </div>
-            <p class="text-sm text-zinc-400 line-clamp-2">${escapeHtml(data.prompt)}</p>
+            <p class="text-sm line-clamp-2" style="color: var(--text-secondary);">${escapeHtml(data.prompt)}</p>
             <div class="flex gap-2">
-                <button class="copy-btn flex-1 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm cursor-pointer transition-colors">Copy Prompt</button>
-                <a href="${url}" target="_blank" class="flex-1 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm flex items-center justify-center transition-colors">Open</a>
+                <button class="copy-btn action-btn flex-1 h-10 text-sm cursor-pointer flex items-center justify-center gap-2">
+                    <i data-lucide="copy" class="w-4 h-4"></i>Copy
+                </button>
+                <a href="${url}" target="_blank" class="action-btn flex-1 h-10 text-sm flex items-center justify-center gap-2">
+                    <i data-lucide="external-link" class="w-4 h-4"></i>Open
+                </a>
             </div>
         </div>
     `;
@@ -272,6 +272,7 @@ function renderPreview(data) {
     }
     card.querySelector('.copy-btn').addEventListener('click', () => copyToClipboard(data.prompt));
     previewArea.appendChild(card);
+    lucide.createIcons();
 }
 
 // ==================== Manual Collection ====================
@@ -311,36 +312,36 @@ addVideoBtn.addEventListener('click', async () => {
 
 // ==================== Load Functions ====================
 async function loadGallery() {
-    galleryGrid.innerHTML = '<div class="col-span-full flex justify-center py-20"><div class="w-10 h-10 rounded-full border-2 border-aurora-purple/20 border-t-aurora-purple animate-spin"></div></div>';
+    galleryGrid.innerHTML = '<div class="col-span-full flex justify-center py-20"><div class="spinner w-10 h-10 animate-spin"></div></div>';
     try {
         const res = await fetch('/api/images');
         if (res.status === 401) { location.href = '/login.html'; return; }
         const images = (await res.json()).filter(i => i.source !== 'manual');
-        galleryGrid.innerHTML = images.length ? '' : '<p class="col-span-full text-center text-zinc-500 py-20">No images yet</p>';
+        galleryGrid.innerHTML = images.length ? '' : `<p class="col-span-full text-center py-20" style="color: var(--text-tertiary);">No images yet</p>`;
         images.forEach(img => renderCard(img, galleryGrid, 'image'));
-    } catch { galleryGrid.innerHTML = '<p class="col-span-full text-center text-red-400 py-20">Failed to load</p>'; }
+    } catch { galleryGrid.innerHTML = `<p class="col-span-full text-center py-20" style="color: #EF4444;">Failed to load</p>`; }
 }
 
 async function loadCollection() {
-    collectionGallery.innerHTML = '<div class="col-span-full flex justify-center py-20"><div class="w-10 h-10 rounded-full border-2 border-aurora-purple/20 border-t-aurora-purple animate-spin"></div></div>';
+    collectionGallery.innerHTML = '<div class="col-span-full flex justify-center py-20"><div class="spinner w-10 h-10 animate-spin"></div></div>';
     try {
         const res = await fetch('/api/images');
         if (res.status === 401) { location.href = '/login.html'; return; }
         const images = (await res.json()).filter(i => i.source === 'manual');
-        collectionGallery.innerHTML = images.length ? '' : '<p class="col-span-full text-center text-zinc-500 py-20">No collection yet</p>';
+        collectionGallery.innerHTML = images.length ? '' : `<p class="col-span-full text-center py-20" style="color: var(--text-tertiary);">No collection yet</p>`;
         images.forEach(img => renderCard(img, collectionGallery, 'image'));
-    } catch { collectionGallery.innerHTML = '<p class="col-span-full text-center text-red-400 py-20">Failed to load</p>'; }
+    } catch { collectionGallery.innerHTML = `<p class="col-span-full text-center py-20" style="color: #EF4444;">Failed to load</p>`; }
 }
 
 async function loadVideos() {
-    videoGallery.innerHTML = '<div class="col-span-full flex justify-center py-20"><div class="w-10 h-10 rounded-full border-2 border-aurora-purple/20 border-t-aurora-purple animate-spin"></div></div>';
+    videoGallery.innerHTML = '<div class="col-span-full flex justify-center py-20"><div class="spinner w-10 h-10 animate-spin"></div></div>';
     try {
         const res = await fetch('/api/videos');
         if (res.status === 401) { location.href = '/login.html'; return; }
         const videos = await res.json();
-        videoGallery.innerHTML = videos.length ? '' : '<p class="col-span-full text-center text-zinc-500 py-20">No videos yet</p>';
+        videoGallery.innerHTML = videos.length ? '' : `<p class="col-span-full text-center py-20" style="color: var(--text-tertiary);">No videos yet</p>`;
         videos.forEach(v => renderCard(v, videoGallery, 'video'));
-    } catch { videoGallery.innerHTML = '<p class="col-span-full text-center text-red-400 py-20">Failed to load</p>'; }
+    } catch { videoGallery.innerHTML = `<p class="col-span-full text-center py-20" style="color: #EF4444;">Failed to load</p>`; }
 }
 
 // ==================== Unified Card Renderer ====================
@@ -354,37 +355,37 @@ function renderCard(data, container, type) {
     const typeLabel = data.type === 'text-to-video' ? 'T2V' : data.type === 'image-to-video' ? 'I2V' : '';
 
     const card = document.createElement('div');
-    card.className = `group bg-dark-800/50 rounded-2xl border border-white/5 overflow-hidden card-hover cursor-pointer animate-fade-in ${isHidden ? 'card-hidden' : ''}`;
+    card.className = `group glass-card cursor-pointer animate-fade-in ${isHidden ? 'card-hidden' : ''}`;
     card.id = `card-${data.id}`;
 
     const videoSrc = isVideo ? (url.startsWith('/api/proxy') ? url : `/api/proxy/video?url=${encodeURIComponent(url)}`) : url;
     const imageSrc = getImageProxyUrl(url);
     const mediaHtml = isVideo
-        ? `<div class="relative bg-black card-image">${typeLabel ? `<span class="absolute top-3 left-3 z-10 px-2 py-1 text-[10px] font-bold bg-gradient-to-r from-aurora-purple to-aurora-pink text-white rounded">${typeLabel}</span>` : ''}<video controls preload="metadata" class="w-full aspect-video object-contain" src="${videoSrc}"></video></div>`
-        : `<div class="aspect-square overflow-hidden bg-dark-900 relative"><img src="${imageSrc}" alt="Image" loading="lazy" class="card-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"><div class="card-hidden-badge hidden absolute inset-0 items-center justify-center"><span class="px-3 py-1.5 bg-black/60 rounded-lg text-xs text-zinc-300">Hidden</span></div></div>`;
+        ? `<div class="relative card-image" style="background: #000;">${typeLabel ? `<span class="absolute top-3 left-3 z-10 px-2 py-1 text-[10px] font-bold rounded" style="background: linear-gradient(135deg, #007AFF 0%, #BF5AF2 100%); color: white;">${typeLabel}</span>` : ''}<video controls preload="metadata" class="w-full aspect-video object-contain" src="${videoSrc}"></video></div>`
+        : `<div class="aspect-square overflow-hidden relative" style="background: var(--bg-primary);"><img src="${imageSrc}" alt="Image" loading="lazy" class="card-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"><div class="card-hidden-badge hidden absolute inset-0 items-center justify-center" style="background: rgba(0,0,0,0.6);"><span class="px-3 py-1.5 rounded-lg text-xs" style="color: var(--text-secondary);">Hidden</span></div></div>`;
 
     // Source image info for generated media (I2V or Image-Edit)
-    const sourceImageHtml = (data.sourceImageUrl) 
-        ? `<div class="flex items-center gap-1.5 mt-1"><span class="text-[10px] text-zinc-500">Source:</span><a href="${escapeHtml(data.sourceImageUrl)}" target="_blank" class="source-link text-[10px] text-aurora-cyan hover:text-aurora-cyan/80 truncate max-w-[180px] inline-block" title="${escapeHtml(data.sourceImageUrl)}">${escapeHtml(data.sourceImageUrl.split('/').pop().substring(0, 30))}</a></div>`
+    const sourceImageHtml = (data.sourceImageUrl)
+        ? `<div class="flex items-center gap-1.5 mt-1"><span class="text-[10px]" style="color: var(--text-tertiary);">Source:</span><a href="${escapeHtml(data.sourceImageUrl)}" target="_blank" class="source-link text-[10px] truncate max-w-[180px] inline-block" style="color: #06B6D4;" title="${escapeHtml(data.sourceImageUrl)}">${escapeHtml(data.sourceImageUrl.split('/').pop().substring(0, 30))}</a></div>`
         : '';
 
     card.innerHTML = `
         ${mediaHtml}
         <div class="p-4 space-y-3">
             <div class="flex flex-wrap gap-1.5">
-                <span class="px-2 py-0.5 text-[10px] font-medium bg-aurora-purple/20 text-aurora-purple rounded">${escapeHtml(data.model || 'Unknown')}</span>
-                ${data.provider ? `<span class="px-2 py-0.5 text-[10px] font-medium bg-aurora-cyan/20 text-aurora-cyan rounded">${escapeHtml(data.provider)}</span>` : ''}
-                ${data.aspectRatio ? `<span class="px-2 py-0.5 text-[10px] font-medium bg-white/10 text-zinc-400 rounded">${escapeHtml(data.aspectRatio)}</span>` : ''}
+                <span class="px-2 py-0.5 text-[10px] font-medium rounded" style="background: rgba(139,92,246,0.2); color: #8B5CF6;">${escapeHtml(data.model || 'Unknown')}</span>
+                ${data.provider ? `<span class="px-2 py-0.5 text-[10px] font-medium rounded" style="background: rgba(6,182,212,0.2); color: #06B6D4;">${escapeHtml(data.provider)}</span>` : ''}
+                ${data.aspectRatio ? `<span class="px-2 py-0.5 text-[10px] font-medium rounded" style="background: var(--glass-bg); color: var(--text-secondary);">${escapeHtml(data.aspectRatio)}</span>` : ''}
             </div>
-            ${data.prompt ? `<p class="text-xs text-zinc-500 line-clamp-2">${escapeHtml(data.prompt)}</p>` : ''}
+            ${data.prompt ? `<p class="text-xs line-clamp-2" style="color: var(--text-tertiary);">${escapeHtml(data.prompt)}</p>` : ''}
             ${sourceImageHtml}
-            <div class="flex items-center justify-between pt-2 border-t border-white/5">
-                <span class="text-[10px] text-zinc-600">${date.toLocaleDateString('zh-CN')}</span>
+            <div class="flex items-center justify-between pt-2" style="border-top: 1px solid var(--glass-border);">
+                <span class="text-[10px]" style="color: var(--text-tertiary);">${date.toLocaleDateString('zh-CN')}</span>
                 <div class="flex gap-1">
-                    ${data.prompt ? '<button class="copy-btn w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors cursor-pointer" title="Copy Prompt"><svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/></svg></button>' : ''}
-                    <a href="${url}" target="_blank" class="open-btn w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors" title="Open in New Tab"><svg class="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg></a>
-                    <button class="hide-btn w-8 h-8 rounded-lg ${isHidden ? 'bg-aurora-purple/20 hover:bg-aurora-purple/30' : 'bg-white/5 hover:bg-white/10'} flex items-center justify-center transition-colors cursor-pointer" title="${isHidden ? 'Unhide' : 'Hide'}"><svg class="w-4 h-4 ${isHidden ? 'text-aurora-purple' : 'text-zinc-400'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="${isHidden ? 'M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178zM15 12a3 3 0 11-6 0 3 3 0 016 0z' : 'M3.98 8.223A10.477 10.477 0 001.934 12c1.292 4.338 5.31 7.5 10.066 7.5.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88'}"/></svg></button>
-                    <button class="delete-btn w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center transition-colors cursor-pointer" title="Delete"><svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg></button>
+                    ${data.prompt ? `<button class="copy-btn action-btn w-8 h-8 flex items-center justify-center cursor-pointer" title="Copy Prompt"><i data-lucide="copy" class="w-4 h-4"></i></button>` : ''}
+                    <a href="${url}" target="_blank" class="open-btn action-btn w-8 h-8 flex items-center justify-center" title="Open in New Tab"><i data-lucide="external-link" class="w-4 h-4"></i></a>
+                    <button class="hide-btn action-btn w-8 h-8 flex items-center justify-center cursor-pointer ${isHidden ? '' : ''}" title="${isHidden ? 'Unhide' : 'Hide'}" style="${isHidden ? 'background: rgba(139,92,246,0.2);' : ''}"><i data-lucide="${isHidden ? 'eye' : 'eye-off'}" class="w-4 h-4" style="${isHidden ? 'color: #8B5CF6;' : ''}"></i></button>
+                    <button class="delete-btn action-btn w-8 h-8 flex items-center justify-center cursor-pointer" title="Delete" style="--glass-bg: rgba(239,68,68,0.1);"><i data-lucide="trash-2" class="w-4 h-4" style="color: #EF4444;"></i></button>
                 </div>
             </div>
         </div>
@@ -418,6 +419,7 @@ function renderCard(data, container, type) {
     });
 
     container.appendChild(card);
+    lucide.createIcons();
 }
 
 // ==================== Hide / Unhide ====================
@@ -464,6 +466,7 @@ function openLightbox(data) {
     $('lightbox-prompt').textContent = data.prompt || '(no prompt)';
     // "Open Original" should link to the original URL, not the proxy
     $('lightbox-open').href = url;
+    lucide.createIcons();
 
     // Show source image link for I2V videos
     let sourceHtml = '';
@@ -509,9 +512,10 @@ function escapeHtml(text) {
 function copyToClipboard(text) {
     function showToast() {
         const toast = document.createElement('div');
-        toast.className = 'fixed bottom-4 right-4 bg-aurora-purple text-white px-4 py-2 rounded-lg shadow-lg z-[60] animate-fade-in';
-        toast.textContent = 'Copied!';
+        toast.className = 'toast fixed bottom-6 right-6 px-5 py-3 shadow-lg z-[60] animate-fade-in flex items-center gap-2';
+        toast.innerHTML = '<i data-lucide="check" class="w-4 h-4" style="color: #10B981;"></i><span>Copied!</span>';
         document.body.appendChild(toast);
+        lucide.createIcons();
         setTimeout(() => toast.remove(), 1500);
     }
 
