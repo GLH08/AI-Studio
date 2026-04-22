@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,64 +7,292 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M15.477 0c.415 0 .749.338.788.752a7.775 7.775 0 006.985 6.984c.413.04.752.373.752.788v6.952c0 .415-.338.748-.752.788a7.775 7.775 0 00-6.985 6.984c-.04.414-.373.752-.788.752H8.525c-.416 0-.749-.338-.789-.752a7.775 7.775 0 00-6.984-6.984c-.414-.04-.752-.373-.752-.788V8.524c0-.415.338-.748.752-.788A7.775 7.775 0 007.736.752C7.776.338 8.11 0 8.526 0h6.95z' fill='%238B5CF6'/%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
-                    fontFamily: { serif: ['Playfair Display', 'serif'], sans: ['Inter', 'sans-serif'] },
+                    fontFamily: { serif: ['Playfair Display', 'serif'], sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'] },
                     colors: {
-                        aurora: { purple: '#8B5CF6', pink: '#EC4899', cyan: '#06B6D4', blue: '#3B82F6' },
-                        dark: { 900: '#09090b', 800: '#18181b', 700: '#27272a', 600: '#3f3f46' }
+                        accent: { blue: '#007AFF', purple: '#BF5AF2', pink: '#FF375F', cyan: '#5AC8FA' }
                     }
                 }
             }
         }
     </script>
+    <style>
+        /* ===== CSS Variables - Dark Theme ===== */
+        [data-theme="dark"] {
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-bg-hover: rgba(255, 255, 255, 0.12);
+            --glass-bg-active: rgba(255, 255, 255, 0.16);
+            --glass-border: rgba(255, 255, 255, 0.14);
+            --glass-border-strong: rgba(255, 255, 255, 0.24);
+            --text-primary: rgba(255, 255, 255, 0.95);
+            --text-secondary: rgba(255, 255, 255, 0.65);
+            --text-tertiary: rgba(255, 255, 255, 0.45);
+            --bg-primary: #1c1c1e;
+            --bg-secondary: #2c2c2e;
+            --bg-tertiary: #3a3a3c;
+            --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            --shadow-button: 0 4px 16px rgba(0, 122, 255, 0.35);
+            --overlay-bg: rgba(0, 0, 0, 0.5);
+        }
+
+        /* ===== CSS Variables - Light Theme ===== */
+        [data-theme="light"] {
+            --glass-bg: rgba(255, 255, 255, 0.70);
+            --glass-bg-hover: rgba(255, 255, 255, 0.85);
+            --glass-bg-active: rgba(255, 255, 255, 0.95);
+            --glass-border: rgba(0, 0, 0, 0.10);
+            --glass-border-strong: rgba(0, 0, 0, 0.20);
+            --text-primary: rgba(0, 0, 0, 0.95);
+            --text-secondary: rgba(0, 0, 0, 0.65);
+            --text-tertiary: rgba(0, 0, 0, 0.45);
+            --bg-primary: #f5f5f7;
+            --bg-secondary: #e8e8ed;
+            --bg-tertiary: #d2d2d7;
+            --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            --shadow-button: 0 4px 16px rgba(0, 122, 255, 0.25);
+            --overlay-bg: rgba(255, 255, 255, 0.5);
+        }
+
+        /* ===== Base Styles ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* ===== Glass Effect ===== */
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            box-shadow: var(--shadow-glass);
+            transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        .glass-hover:hover {
+            background: var(--glass-bg-hover);
+            border-color: var(--glass-border-strong);
+            transform: translateY(-2px);
+        }
+        .glass-button {
+            background: var(--glass-bg);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+            color: var(--text-primary);
+        }
+        .glass-button:hover {
+            background: var(--glass-bg-hover);
+            border-color: var(--glass-border-strong);
+            box-shadow: var(--shadow-button);
+            transform: translateY(-1px);
+        }
+        .glass-button:active {
+            background: var(--glass-bg-active);
+            transform: scale(0.98);
+        }
+
+        /* ===== Primary Button ===== */
+        .btn-primary {
+            background: linear-gradient(135deg, #007AFF 0%, #BF5AF2 50%, #FF375F 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 16px rgba(0, 122, 255, 0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 122, 255, 0.4);
+            filter: brightness(1.05);
+        }
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        /* ===== Inputs ===== */
+        .glass-input {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+            width: 100%;
+            padding: 0.75rem 1rem;
+        }
+        .glass-input::placeholder {
+            color: var(--text-tertiary);
+        }
+        .glass-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
+        }
+
+        /* ===== Select ===== */
+        .glass-select {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            padding: 0.75rem 1rem;
+        }
+        .glass-select:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
+        }
+        .glass-select option {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        /* ===== Scrollbar ===== */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--glass-border-strong); }
+
+        /* ===== Text Colors ===== */
+        .text-primary { color: var(--text-primary); }
+        .text-secondary { color: var(--text-secondary); }
+        .text-tertiary { color: var(--text-tertiary); }
+
+        /* ===== Background Colors ===== */
+        .bg-primary { background-color: var(--bg-primary); }
+        .bg-secondary { background-color: var(--bg-secondary); }
+        .bg-tertiary { background-color: var(--bg-tertiary); }
+
+        /* ===== Accent Gradient Text ===== */
+        .text-gradient {
+            background: linear-gradient(135deg, #007AFF 0%, #BF5AF2 50%, #FF375F 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ===== Animations ===== */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+        .animate-spin { animation: spin 1s linear infinite; }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+
+        /* ===== Responsive Sidebar ===== */
+        @media (max-width: 1024px) {
+            aside { transform: translateX(-100%); transition: transform 0.3s ease; position: fixed; z-index: 50; }
+            aside.open { transform: translateX(0); }
+            main { margin-left: 0 !important; }
+        }
+
+        /* ===== Nav Button ===== */
+        .nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border-radius: 14px;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .nav-btn:hover {
+            background: var(--glass-bg-hover);
+            color: var(--text-primary);
+        }
+        .nav-btn.active {
+            background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(191, 90, 242, 0.15));
+            border-color: rgba(0, 122, 255, 0.3);
+            color: var(--text-primary);
+        }
+        .nav-btn i { width: 20px; height: 20px; }
+
+        /* ===== Card Hover Effect ===== */
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+        }
+
+        /* ===== Hidden State ===== */
+        .card-hidden .card-image { filter: blur(20px) brightness(0.5); }
+        .card-hidden .card-hidden-badge { display: flex; }
+    </style>
 </head>
-<body class="font-sans bg-dark-900 text-zinc-100 min-h-screen overflow-x-hidden">
+<body class="font-sans min-h-screen overflow-x-hidden">
     <!-- Aurora Background -->
     <div class="fixed inset-0 -z-10 overflow-hidden">
-        <div class="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] bg-aurora-purple/20 rounded-full blur-[120px] animate-pulse"></div>
-        <div class="absolute -bottom-1/4 -right-1/4 w-[600px] h-[600px] bg-aurora-pink/15 rounded-full blur-[100px]"></div>
-        <div class="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-aurora-cyan/10 rounded-full blur-[80px]"></div>
+        <div class="absolute -top-1/3 -left-1/4 w-[700px] h-[700px] rounded-full" style="background: radial-gradient(circle, rgba(0,122,255,0.15) 0%, transparent 70%);"></div>
+        <div class="absolute -bottom-1/4 -right-1/4 w-[600px] h-[600px] rounded-full" style="background: radial-gradient(circle, rgba(191,90,242,0.12) 0%, transparent 70%);"></div>
+        <div class="absolute top-1/2 right-1/4 w-[400px] h-[400px] rounded-full" style="background: radial-gradient(circle, rgba(255,55,95,0.08) 0%, transparent 70%);"></div>
     </div>
 
     <div class="flex min-h-screen">
         <!-- Sidebar -->
-        <aside class="w-72 border-r border-white/5 bg-dark-900/80 backdrop-blur-xl flex flex-col fixed h-full z-40">
-            <div class="p-6 border-b border-white/5">
+        <aside class="glass w-72 flex flex-col fixed h-full z-40" style="border-radius: 0 24px 24px 0; border-left: none; border-top: none; border-right: none; border-bottom: none;">
+            <div class="p-6 border-b" style="border-color: var(--glass-border);">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-aurora-purple to-aurora-pink flex items-center justify-center">
-                        <svg class="w-6 h-6 text-white" viewBox="0 0 24 24"><path d="M15.477 0c.415 0 .749.338.788.752a7.775 7.775 0 006.985 6.984c.413.04.752.373.752.788v6.952c0 .415-.338.748-.752.788a7.775 7.775 0 00-6.985 6.984c-.04.414-.373.752-.788.752H8.525c-.416 0-.749-.338-.789-.752a7.775 7.775 0 00-6.984-6.984c-.414-.04-.752-.373-.752-.788V8.524c0-.415.338-.748.752-.788A7.775 7.775 0 007.736.752C7.776.338 8.11 0 8.526 0h6.95z" fill="currentColor"/></svg>
+                    <div class="w-11 h-11 rounded-xl flex items-center justify-center" style="background: linear-gradient(135deg, #007AFF 0%, #BF5AF2 100%);">
+                        <i data-lucide="sparkles" class="w-5 h-5 text-white"></i>
                     </div>
                     <div>
-                        <h1 class="font-serif text-xl font-semibold">AI Studio</h1>
-                        <p class="text-xs text-zinc-500">Creative Studio</p>
+                        <h1 class="font-serif text-xl font-semibold" style="color: var(--text-primary);">AI Studio</h1>
+                        <p class="text-xs" style="color: var(--text-tertiary);">Creative Studio</p>
                     </div>
                 </div>
             </div>
             <nav class="flex-1 p-4 space-y-1">
-                <button class="nav-btn active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 cursor-pointer" data-tab="create">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+                <button class="nav-btn active" data-tab="create">
+                    <i data-lucide="wand-2"></i>
                     <span class="font-medium">Create</span>
                 </button>
-                <button class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 cursor-pointer" data-tab="gallery">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z"/></svg>
+                <button class="nav-btn" data-tab="gallery">
+                    <i data-lucide="image"></i>
                     <span class="font-medium">Gallery</span>
                 </button>
-                <button class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 cursor-pointer" data-tab="collection">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg>
+                <button class="nav-btn" data-tab="collection">
+                    <i data-lucide="folder"></i>
                     <span class="font-medium">Collection</span>
                 </button>
-                <button class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 cursor-pointer" data-tab="video">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z"/></svg>
+                <button class="nav-btn" data-tab="video">
+                    <i data-lucide="video"></i>
                     <span class="font-medium">Video</span>
                 </button>
             </nav>
-            <div class="p-4 border-t border-white/5">
-                <div class="px-4 py-3 rounded-xl bg-gradient-to-r from-aurora-purple/10 to-aurora-pink/10 border border-white/5">
-                    <p class="text-xs text-zinc-400">Powered by</p>
-                    <p class="text-sm font-medium text-white">Multi-API</p>
+            <div class="p-4 border-t" style="border-color: var(--glass-border);">
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="glass-button w-full flex items-center justify-between px-4 py-3 mb-3 cursor-pointer">
+                    <span class="flex items-center gap-2">
+                        <i data-lucide="sun" class="w-4 h-4"></i>
+                        <span class="text-sm font-medium">Theme</span>
+                    </span>
+                    <i data-lucide="moon" class="w-4 h-4" id="theme-icon"></i>
+                </button>
+                <div class="glass p-4 rounded-xl">
+                    <p class="text-xs" style="color: var(--text-tertiary);">Powered by</p>
+                    <p class="text-sm font-semibold" style="color: var(--text-primary);">Multi-API</p>
                 </div>
             </div>
         </aside>
@@ -72,15 +300,15 @@
         <!-- Main Content -->
         <main class="flex-1 ml-72">
             <!-- Mobile Header -->
-            <div class="lg:hidden p-4 border-b border-white/5 flex items-center justify-between sticky top-0 bg-dark-900/90 backdrop-blur-xl z-30">
-                <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-aurora-purple to-aurora-pink flex items-center justify-center">
-                        <svg class="w-4 h-4 text-white" viewBox="0 0 24 24"><path d="M15.477 0c.415 0 .749.338.788.752a7.775 7.775 0 006.985 6.984c.413.04.752.373.752.788v6.952c0 .415-.338.748-.752.788a7.775 7.775 0 00-6.985 6.984c-.04.414-.373.752-.788.752H8.525c-.416 0-.749-.338-.789-.752a7.775 7.775 0 00-6.984-6.984c-.414-.04-.752-.373-.752-.788V8.524c0-.415.338-.748.752-.788A7.775 7.775 0 007.736.752C7.776.338 8.11 0 8.526 0h6.95z" fill="currentColor"/></svg>
+            <div class="lg:hidden p-4 border-b flex items-center justify-between sticky top-0 z-30 glass" style="border-color: var(--glass-border);">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #007AFF 0%, #BF5AF2 100%);">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-white"></i>
                     </div>
-                    <h1 class="font-serif font-semibold">AI Studio</h1>
+                    <h1 class="font-serif font-semibold text-lg" style="color: var(--text-primary);">AI Studio</h1>
                 </div>
-                <button id="mobile-menu-btn" class="p-2 text-zinc-400 hover:text-white cursor-pointer">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                <button id="mobile-menu-btn" class="glass-button p-2 cursor-pointer">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
                 </button>
             </div>
 
@@ -88,42 +316,47 @@
             <div id="create-view" class="view p-8">
                 <div class="max-w-6xl mx-auto">
                     <div class="mb-8">
-                        <h2 class="font-serif text-4xl font-semibold mb-2">Create Magic</h2>
-                        <p class="text-zinc-400">Transform your imagination into stunning visuals</p>
+                        <h2 class="font-serif text-4xl font-semibold mb-2 text-gradient">Create Magic</h2>
+                        <p class="text-secondary">Transform your imagination into stunning visuals</p>
                     </div>
                     <div class="grid grid-cols-12 gap-6">
+                        <!-- Left Panel -->
                         <div class="col-span-12 lg:col-span-5 space-y-6">
-                            <div class="bg-dark-800/50 backdrop-blur-sm rounded-2xl border border-white/5 p-6">
-                                <h3 class="text-lg font-medium mb-6 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-aurora-purple"></span>Configuration</h3>
+                            <!-- Config Card -->
+                            <div class="glass p-6">
+                                <h3 class="text-lg font-medium mb-6 flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full" style="background: var(--accent-blue);"></span>
+                                    <span style="color: var(--text-primary);">Configuration</span>
+                                </h3>
                                 <!-- Provider -->
                                 <div class="space-y-2 mb-5">
-                                    <label class="text-sm text-zinc-400">Provider</label>
-                                    <select id="provider" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white transition-all focus:border-aurora-purple/50 focus:ring-2 focus:ring-aurora-purple/20 cursor-pointer"></select>
+                                    <label class="text-sm font-medium text-secondary">Provider</label>
+                                    <select id="provider" class="glass-select"></select>
                                 </div>
-                                <!-- Mode Tabs (only for grok2api) -->
+                                <!-- Mode Tabs -->
                                 <div id="mode-tabs" class="hidden mb-5">
-                                    <label class="text-sm text-zinc-400 mb-2 block">Mode</label>
-                                    <div class="flex gap-1 p-1 bg-dark-700/50 rounded-xl border border-white/10">
-                                        <button class="mode-btn flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all cursor-pointer" data-mode="text-to-image">🖼 Image</button>
-                                        <button class="mode-btn flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all cursor-pointer" data-mode="image-edit">✏️ Edit</button>
-                                        <button class="mode-btn flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all cursor-pointer" data-mode="text-to-video">🎬 T2V</button>
-                                        <button class="mode-btn flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all cursor-pointer" data-mode="image-to-video">🎬 I2V</button>
+                                    <label class="text-sm font-medium text-secondary mb-2 block">Mode</label>
+                                    <div class="glass flex gap-1 p-1 rounded-xl">
+                                        <button class="mode-btn flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all cursor-pointer" data-mode="text-to-image">Image</button>
+                                        <button class="mode-btn flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all cursor-pointer" data-mode="image-edit">Edit</button>
+                                        <button class="mode-btn flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all cursor-pointer" data-mode="text-to-video">T2V</button>
+                                        <button class="mode-btn flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all cursor-pointer" data-mode="image-to-video">I2V</button>
                                     </div>
                                 </div>
                                 <!-- Model -->
                                 <div class="space-y-2 mb-5">
-                                    <label class="text-sm text-zinc-400">Model</label>
-                                    <select id="model" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white transition-all focus:border-aurora-purple/50 focus:ring-2 focus:ring-aurora-purple/20 cursor-pointer"></select>
+                                    <label class="text-sm font-medium text-secondary">Model</label>
+                                    <select id="model" class="glass-select"></select>
                                 </div>
-                                <!-- Source Image URL (for Edit / I2V) -->
+                                <!-- Source Image URL -->
                                 <div id="control-source-image" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm text-zinc-400">Source Image URL</label>
-                                    <input id="source-image-url" type="url" placeholder="https://..." class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white placeholder-zinc-600 transition-all focus:border-aurora-purple/50 focus:ring-2 focus:ring-aurora-purple/20">
+                                    <label class="text-sm font-medium text-secondary">Source Image URL</label>
+                                    <input id="source-image-url" type="url" placeholder="https://..." class="glass-input">
                                 </div>
-                                <!-- Image Size (grok2api image modes) -->
+                                <!-- Grok Size -->
                                 <div id="control-grok-size" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm text-zinc-400">Size</label>
-                                    <select id="grok-size" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer">
+                                    <label class="text-sm font-medium text-secondary">Size</label>
+                                    <select id="grok-size" class="glass-select">
                                         <option value="1024x1024">1024×1024</option>
                                         <option value="1280x720">1280×720</option>
                                         <option value="720x1280">720×1280</option>
@@ -131,20 +364,20 @@
                                         <option value="1024x1792">1024×1792</option>
                                     </select>
                                 </div>
-                                <!-- Image Count (grok2api image modes) -->
+                                <!-- Image Count -->
                                 <div id="control-grok-n" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm text-zinc-400">Number of Images</label>
-                                    <select id="grok-n" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer">
+                                    <label class="text-sm font-medium text-secondary">Number of Images</label>
+                                    <select id="grok-n" class="glass-select">
                                         <option value="1">1</option>
                                         <option value="2">2</option>
                                         <option value="3">3</option>
                                         <option value="4">4</option>
                                     </select>
                                 </div>
-                                <!-- Video: Aspect Ratio -->
+                                <!-- Video Ratio -->
                                 <div id="control-video-ratio" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm text-zinc-400">Aspect Ratio</label>
-                                    <select id="video-ratio" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer">
+                                    <label class="text-sm font-medium text-secondary">Aspect Ratio</label>
+                                    <select id="video-ratio" class="glass-select">
                                         <option value="3:2">3:2</option>
                                         <option value="16:9">16:9</option>
                                         <option value="9:16">9:16</option>
@@ -152,46 +385,47 @@
                                         <option value="1:1">1:1</option>
                                     </select>
                                 </div>
-                                <!-- Video: Duration -->
+                                <!-- Video Duration -->
                                 <div id="control-video-duration" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm text-zinc-400">Duration</label>
-                                    <select id="video-duration" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer">
+                                    <label class="text-sm font-medium text-secondary">Duration</label>
+                                    <select id="video-duration" class="glass-select">
                                         <option value="6">6 seconds</option>
                                         <option value="10">10 seconds</option>
                                         <option value="15">15 seconds</option>
                                     </select>
                                 </div>
-                                <!-- Video: Resolution -->
+                                <!-- Video Resolution -->
                                 <div id="control-video-resolution" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm text-zinc-400">Resolution</label>
-                                    <select id="video-resolution" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer">
+                                    <label class="text-sm font-medium text-secondary">Resolution</label>
+                                    <select id="video-resolution" class="glass-select">
                                         <option value="480p">480p</option>
                                         <option value="720p">720p</option>
                                     </select>
                                 </div>
-                                <!-- Video: Preset -->
+                                <!-- Video Preset -->
                                 <div id="control-video-preset" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm text-zinc-400">Preset</label>
-                                    <select id="video-preset" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer">
+                                    <label class="text-sm font-medium text-secondary">Preset</label>
+                                    <select id="video-preset" class="glass-select">
                                         <option value="custom">Custom</option>
                                         <option value="fun">Fun</option>
                                         <option value="normal">Normal</option>
                                         <option value="spicy">Spicy</option>
                                     </select>
                                 </div>
-                                <!-- Size / Quality / Style (OpenAI standard) -->
+                                <!-- Size -->
                                 <div id="control-size" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm text-zinc-400">Size</label>
-                                    <select id="size" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer">
+                                    <label class="text-sm font-medium text-secondary">Size</label>
+                                    <select id="size" class="glass-select">
                                         <option value="">Auto</option>
                                         <option value="1024x1024">1024×1024</option>
                                         <option value="1024x1792">1024×1792</option>
                                         <option value="1792x1024">1792×1024</option>
                                     </select>
                                 </div>
+                                <!-- Quality -->
                                 <div id="control-quality" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm text-zinc-400">Quality</label>
-                                    <select id="quality" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer">
+                                    <label class="text-sm font-medium text-secondary">Quality</label>
+                                    <select id="quality" class="glass-select">
                                         <option value="">Auto</option>
                                         <option value="standard">Standard</option>
                                         <option value="hd">HD</option>
@@ -200,36 +434,42 @@
                                         <option value="low">Low</option>
                                     </select>
                                 </div>
+                                <!-- Style -->
                                 <div id="control-style" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm text-zinc-400">Style</label>
-                                    <select id="style" class="w-full h-12 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer">
+                                    <label class="text-sm font-medium text-secondary">Style</label>
+                                    <select id="style" class="glass-select">
                                         <option value="">Auto</option>
                                         <option value="vivid">Vivid</option>
                                         <option value="natural">Natural</option>
                                     </select>
                                 </div>
                             </div>
-                            <div class="bg-dark-800/50 backdrop-blur-sm rounded-2xl border border-white/5 p-6">
-                                <h3 class="text-lg font-medium mb-4 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-aurora-pink"></span>Prompt</h3>
-                                <textarea id="prompt" rows="5" placeholder="Describe your vision in detail..." class="w-full px-4 py-3 rounded-xl bg-dark-700/50 border border-white/10 text-white placeholder-zinc-600 resize-none transition-all focus:border-aurora-purple/50 focus:ring-2 focus:ring-aurora-purple/20"></textarea>
-                                <button id="generateBtn" class="w-full mt-4 h-14 rounded-xl bg-gradient-to-r from-aurora-purple to-aurora-pink text-white font-semibold transition-all hover:opacity-90 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+                            <!-- Prompt Card -->
+                            <div class="glass p-6">
+                                <h3 class="text-lg font-medium mb-4 flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full" style="background: var(--accent-pink);"></span>
+                                    <span style="color: var(--text-primary);">Prompt</span>
+                                </h3>
+                                <textarea id="prompt" rows="5" placeholder="Describe your vision in detail..." class="glass-input resize-none"></textarea>
+                                <button id="generateBtn" class="btn-primary w-full mt-4 h-14 flex items-center justify-center gap-2">
+                                    <i data-lucide="sparkles" class="w-5 h-5"></i>
                                     Generate
                                 </button>
                             </div>
                         </div>
+                        <!-- Right Panel - Preview -->
                         <div class="col-span-12 lg:col-span-7">
-                            <div id="preview-area" class="bg-dark-800/30 backdrop-blur-sm rounded-2xl border border-white/5 min-h-[500px] flex items-center justify-center overflow-hidden">
-                                <div id="empty-state" class="text-center p-12">
-                                    <div class="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-aurora-purple/20 to-aurora-pink/20 flex items-center justify-center">
-                                        <svg class="w-12 h-12 text-aurora-purple/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z"/></svg>
+                            <div id="preview-area" class="glass min-h-[500px] flex items-center justify-center overflow-hidden">
+                                <div id="empty-state" class="text-center p-12 animate-fade-in">
+                                    <div class="w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center" style="background: linear-gradient(135deg, rgba(0,122,255,0.1), rgba(191,90,242,0.1));">
+                                        <i data-lucide="image-plus" class="w-12 h-12" style="color: var(--accent-blue); opacity: 0.6;"></i>
                                     </div>
-                                    <h3 class="font-serif text-2xl font-medium mb-2">Your Canvas Awaits</h3>
-                                    <p class="text-zinc-500 max-w-sm mx-auto">Configure your settings and describe your vision to bring your imagination to life.</p>
+                                    <h3 class="font-serif text-2xl font-medium mb-2" style="color: var(--text-primary);">Your Canvas Awaits</h3>
+                                    <p class="text-secondary max-w-sm mx-auto">Configure your settings and describe your vision to bring your imagination to life.</p>
                                 </div>
                                 <div id="loading" class="hidden text-center p-12">
-                                    <div class="w-16 h-16 mx-auto mb-6 rounded-full border-2 border-aurora-purple/20 border-t-aurora-purple animate-spin"></div>
-                                    <p class="text-zinc-400">Creating your masterpiece...</p>
+                                    <div class="w-16 h-16 mx-auto mb-6 rounded-full border-4" style="border-color: rgba(0,122,255,0.2); border-top-color: var(--accent-blue);" class="animate-spin"></div>
+                                    <p class="text-secondary">Creating your masterpiece...</p>
                                 </div>
                             </div>
                         </div>
@@ -240,7 +480,10 @@
             <!-- Gallery View -->
             <div id="gallery-view" class="view hidden p-8">
                 <div class="max-w-7xl mx-auto">
-                    <div class="mb-8"><h2 class="font-serif text-4xl font-semibold mb-2">Gallery</h2><p class="text-zinc-400">Your generated masterpieces</p></div>
+                    <div class="mb-8">
+                        <h2 class="font-serif text-4xl font-semibold mb-2 text-gradient">Gallery</h2>
+                        <p class="text-secondary">Your generated masterpieces</p>
+                    </div>
                     <div id="gallery-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
                 </div>
             </div>
@@ -250,19 +493,39 @@
                 <div class="max-w-7xl mx-auto">
                     <div class="flex flex-col lg:flex-row gap-8">
                         <div class="lg:w-80 shrink-0">
-                            <div class="bg-dark-800/50 backdrop-blur-sm rounded-2xl border border-white/5 p-6 sticky top-8">
-                                <h3 class="text-lg font-medium mb-6">Add to Collection</h3>
+                            <div class="glass p-6 sticky top-8">
+                                <h3 class="text-lg font-medium mb-6" style="color: var(--text-primary);">Add to Collection</h3>
                                 <div class="space-y-4">
-                                    <div><label class="text-sm text-zinc-400 block mb-2">Image URL</label><input type="text" id="manual-url" placeholder="https://..." class="w-full h-11 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white placeholder-zinc-600"></div>
-                                    <div><label class="text-sm text-zinc-400 block mb-2">Prompt</label><textarea id="manual-prompt" rows="3" placeholder="Describe..." class="w-full px-4 py-3 rounded-xl bg-dark-700/50 border border-white/10 text-white placeholder-zinc-600 resize-none"></textarea></div>
-                                    <div><label class="text-sm text-zinc-400 block mb-2">Model</label><input type="text" id="manual-model" placeholder="Optional" class="w-full h-11 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white placeholder-zinc-600"></div>
-                                    <div><label class="text-sm text-zinc-400 block mb-2">Aspect</label><select id="manual-aspect" class="w-full h-11 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer"><option value="">Select...</option><option value="1:1">1:1</option><option value="16:9">16:9</option><option value="9:16">9:16</option></select></div>
-                                    <button id="addManualBtn" class="w-full h-12 rounded-xl bg-gradient-to-r from-aurora-purple to-aurora-pink text-white font-medium cursor-pointer hover:opacity-90">Add Image</button>
+                                    <div>
+                                        <label class="text-sm font-medium text-secondary block mb-2">Image URL</label>
+                                        <input type="text" id="manual-url" placeholder="https://..." class="glass-input">
+                                    </div>
+                                    <div>
+                                        <label class="text-sm font-medium text-secondary block mb-2">Prompt</label>
+                                        <textarea id="manual-prompt" rows="3" placeholder="Describe..." class="glass-input resize-none"></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm font-medium text-secondary block mb-2">Model</label>
+                                        <input type="text" id="manual-model" placeholder="Optional" class="glass-input">
+                                    </div>
+                                    <div>
+                                        <label class="text-sm font-medium text-secondary block mb-2">Aspect</label>
+                                        <select id="manual-aspect" class="glass-select">
+                                            <option value="">Select...</option>
+                                            <option value="1:1">1:1</option>
+                                            <option value="16:9">16:9</option>
+                                            <option value="9:16">9:16</option>
+                                        </select>
+                                    </div>
+                                    <button id="addManualBtn" class="btn-primary w-full h-12">Add Image</button>
                                 </div>
                             </div>
                         </div>
                         <div class="flex-1">
-                            <div class="mb-6"><h2 class="font-serif text-4xl font-semibold mb-2">Collection</h2><p class="text-zinc-400">Manually curated images</p></div>
+                            <div class="mb-6">
+                                <h2 class="font-serif text-4xl font-semibold mb-2 text-gradient">Collection</h2>
+                                <p class="text-secondary">Manually curated images</p>
+                            </div>
                             <div id="collection-gallery" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
                         </div>
                     </div>
@@ -274,21 +537,50 @@
                 <div class="max-w-7xl mx-auto">
                     <div class="flex flex-col lg:flex-row gap-8">
                         <div class="lg:w-80 shrink-0">
-                            <div class="bg-dark-800/50 backdrop-blur-sm rounded-2xl border border-white/5 p-6 sticky top-8">
-                                <h3 class="text-lg font-medium mb-6">Add Video</h3>
+                            <div class="glass p-6 sticky top-8">
+                                <h3 class="text-lg font-medium mb-6" style="color: var(--text-primary);">Add Video</h3>
                                 <div class="space-y-4">
-                                    <div><label class="text-sm text-zinc-400 block mb-2">Type</label><select id="video-type" class="w-full h-11 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer"><option value="text-to-video">Text to Video</option><option value="image-to-video">Image to Video</option></select></div>
-                                    <div><label class="text-sm text-zinc-400 block mb-2">Video URL</label><input type="text" id="video-url" placeholder="https://..." class="w-full h-11 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white placeholder-zinc-600"></div>
-                                    <div id="video-source-image-group" class="hidden"><label class="text-sm text-zinc-400 block mb-2">Source Image</label><input type="text" id="video-source-image" placeholder="https://..." class="w-full h-11 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white placeholder-zinc-600"></div>
-                                    <div><label class="text-sm text-zinc-400 block mb-2">Prompt</label><textarea id="video-prompt" rows="3" placeholder="Describe..." class="w-full px-4 py-3 rounded-xl bg-dark-700/50 border border-white/10 text-white placeholder-zinc-600 resize-none"></textarea></div>
-                                    <div><label class="text-sm text-zinc-400 block mb-2">Model</label><input type="text" id="video-model" placeholder="Runway, Pika..." class="w-full h-11 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white placeholder-zinc-600"></div>
-                                    <div><label class="text-sm text-zinc-400 block mb-2">Aspect</label><select id="video-aspect" class="w-full h-11 px-4 rounded-xl bg-dark-700/50 border border-white/10 text-white cursor-pointer"><option value="">Select...</option><option value="16:9">16:9</option><option value="9:16">9:16</option><option value="1:1">1:1</option></select></div>
-                                    <button id="addVideoBtn" class="w-full h-12 rounded-xl bg-gradient-to-r from-aurora-purple to-aurora-pink text-white font-medium cursor-pointer hover:opacity-90">Add Video</button>
+                                    <div>
+                                        <label class="text-sm font-medium text-secondary block mb-2">Type</label>
+                                        <select id="video-type" class="glass-select">
+                                            <option value="text-to-video">Text to Video</option>
+                                            <option value="image-to-video">Image to Video</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm font-medium text-secondary block mb-2">Video URL</label>
+                                        <input type="text" id="video-url" placeholder="https://..." class="glass-input">
+                                    </div>
+                                    <div id="video-source-image-group" class="hidden">
+                                        <label class="text-sm font-medium text-secondary block mb-2">Source Image</label>
+                                        <input type="text" id="video-source-image" placeholder="https://..." class="glass-input">
+                                    </div>
+                                    <div>
+                                        <label class="text-sm font-medium text-secondary block mb-2">Prompt</label>
+                                        <textarea id="video-prompt" rows="3" placeholder="Describe..." class="glass-input resize-none"></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm font-medium text-secondary block mb-2">Model</label>
+                                        <input type="text" id="video-model" placeholder="Runway, Pika..." class="glass-input">
+                                    </div>
+                                    <div>
+                                        <label class="text-sm font-medium text-secondary block mb-2">Aspect</label>
+                                        <select id="video-aspect" class="glass-select">
+                                            <option value="">Select...</option>
+                                            <option value="16:9">16:9</option>
+                                            <option value="9:16">9:16</option>
+                                            <option value="1:1">1:1</option>
+                                        </select>
+                                    </div>
+                                    <button id="addVideoBtn" class="btn-primary w-full h-12">Add Video</button>
                                 </div>
                             </div>
                         </div>
                         <div class="flex-1">
-                            <div class="mb-6"><h2 class="font-serif text-4xl font-semibold mb-2">Videos</h2><p class="text-zinc-400">Your video collection</p></div>
+                            <div class="mb-6">
+                                <h2 class="font-serif text-4xl font-semibold mb-2 text-gradient">Videos</h2>
+                                <p class="text-secondary">Your video collection</p>
+                            </div>
                             <div id="video-gallery" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
                         </div>
                     </div>
@@ -299,64 +591,71 @@
 
     <!-- Lightbox Modal -->
     <div id="lightbox" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" id="lightbox-overlay"></div>
+        <div class="absolute inset-0 backdrop-blur-xl" style="background: var(--overlay-bg);" id="lightbox-overlay"></div>
         <div class="relative z-10 flex items-start justify-center w-full h-full overflow-y-auto py-8 px-4">
-            <div class="bg-dark-800 rounded-2xl border border-white/10 max-w-3xl w-full shadow-2xl animate-fade-in">
+            <div class="glass max-w-3xl w-full animate-fade-in" style="border-radius: 24px;">
                 <div class="relative">
-                    <button id="lightbox-close" class="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center cursor-pointer transition-colors">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    <button id="lightbox-close" class="glass-button absolute top-4 right-4 z-20 w-10 h-10 flex items-center justify-center cursor-pointer">
+                        <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
-                    <div id="lightbox-media" class="flex items-center justify-center bg-dark-900 rounded-t-2xl min-h-[300px]"></div>
+                    <div id="lightbox-media" class="flex items-center justify-center rounded-t-2xl min-h-[300px]" style="background: var(--bg-primary);"></div>
                 </div>
                 <div class="p-6 space-y-4">
                     <div id="lightbox-tags" class="flex flex-wrap gap-2"></div>
                     <div>
-                        <label class="text-xs text-zinc-500 uppercase tracking-wider">Prompt</label>
-                        <p id="lightbox-prompt" class="text-sm text-zinc-300 mt-1 whitespace-pre-wrap"></p>
+                        <label class="text-xs font-medium uppercase tracking-wider text-tertiary">Prompt</label>
+                        <p id="lightbox-prompt" class="text-sm mt-1 whitespace-pre-wrap" style="color: var(--text-secondary);"></p>
                     </div>
                     <div class="flex gap-2 pt-2">
-                        <button id="lightbox-copy" class="flex-1 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm cursor-pointer transition-colors">Copy Prompt</button>
-                        <a id="lightbox-open" href="#" target="_blank" class="flex-1 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm flex items-center justify-center transition-colors">Open Original</a>
+                        <button id="lightbox-copy" class="glass-button flex-1 h-10 text-sm cursor-pointer">
+                            <i data-lucide="copy" class="w-4 h-4 inline mr-2"></i>Copy Prompt
+                        </button>
+                        <a id="lightbox-open" href="#" target="_blank" class="glass-button flex-1 h-10 text-sm flex items-center justify-center transition-colors">
+                            <i data-lucide="external-link" class="w-4 h-4 inline mr-2"></i>Open Original
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
-        .nav-btn { color: #71717a; }
-        .nav-btn:hover { background: rgba(255,255,255,0.05); color: #e4e4e7; }
-        .nav-btn.active { background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(236,72,153,0.15)); color: #fff; border: 1px solid rgba(139,92,246,0.3); }
-        .card-hover { transition: all 0.3s ease; }
-        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
-        .card-hidden .card-image { filter: blur(20px) brightness(0.5); }
-        .card-hidden .card-hidden-badge { display: flex; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
-        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-        @media (max-width: 1024px) {
-            aside { transform: translateX(-100%); transition: transform 0.3s ease; }
-            aside.open { transform: translateX(0); }
-            main { margin-left: 0 !important; }
-        }
-    </style>
-
     <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Theme toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const html = document.documentElement;
+
+        function setTheme(theme) {
+            html.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            if (theme === 'dark') {
+                themeIcon.setAttribute('data-lucide', 'moon');
+            } else {
+                themeIcon.setAttribute('data-lucide', 'sun');
+            }
+            lucide.createIcons();
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        setTheme(savedTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+        });
+
         // Mobile menu toggle
         const mobileMenuBtn = document.getElementById('mobile-menu-btn');
         const sidebar = document.querySelector('aside');
-        
+
         if (mobileMenuBtn && sidebar) {
             mobileMenuBtn.addEventListener('click', () => {
                 sidebar.classList.toggle('open');
             });
-            
-            // Close sidebar when clicking a nav button on mobile
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     if (window.innerWidth <= 1024) {
