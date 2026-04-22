@@ -149,3 +149,39 @@ describe('getImageProxyUrl Frontend Helper', () => {
         assert.strictEqual(getImageProxyUrl(dataUri), dataUri);
     });
 });
+
+describe('Video Proxy SSRF Validation', () => {
+    // Same whitelist logic as image proxy - video uses VIDEO_PROXY_WHITELIST which mirrors IMAGE_PROXY_WHITELIST
+    function isVideoUrlAllowed(url, whitelist) {
+        try {
+            const parsedUrl = new URL(url);
+            if (whitelist.length === 0) return true;
+            return whitelist.includes(parsedUrl.hostname);
+        } catch {
+            return false;
+        }
+    }
+
+    const whitelist = ['chevereto.novaw.de', 'videos.example.com'];
+
+    it('should allow whitelisted video domain', () => {
+        assert.strictEqual(isVideoUrlAllowed('https://chevereto.novaw.de/videos/test.mp4', whitelist), true);
+    });
+
+    it('should block non-whitelisted video domain', () => {
+        assert.strictEqual(isVideoUrlAllowed('https://evil.com/video.mp4', whitelist), false);
+    });
+
+    it('should block internal network video URLs', () => {
+        assert.strictEqual(isVideoUrlAllowed('http://localhost:8080/video.mp4', whitelist), false);
+        assert.strictEqual(isVideoUrlAllowed('http://192.168.1.100/video.mp4', whitelist), false);
+    });
+
+    it('should allow any domain when whitelist is empty', () => {
+        assert.strictEqual(isVideoUrlAllowed('https://anyvideo.com/video.mp4', []), true);
+    });
+
+    it('should reject invalid video URLs', () => {
+        assert.strictEqual(isVideoUrlAllowed('not-a-url', whitelist), false);
+    });
+});

@@ -25,6 +25,9 @@ const DB_FILE = path.join(DATA_DIR, 'db.json');
 // Image proxy whitelist (comma-separated domains)
 const IMAGE_PROXY_WHITELIST = (process.env.IMAGE_PROXY_WHITELIST || '').split(',').map(d => d.trim()).filter(Boolean);
 
+// Video proxy uses same whitelist as image proxy
+const VIDEO_PROXY_WHITELIST = IMAGE_PROXY_WHITELIST;
+
 // Image MIME types constant
 const IMAGE_MIME_TYPES = {
     '.jpg': 'image/jpeg',
@@ -1172,6 +1175,20 @@ app.get('/api/proxy/video', async (req, res) => {
         return res.status(400).json({ error: 'Missing url parameter' });
     }
 
+    // Validate URL format
+    let parsedUrl;
+    try {
+        parsedUrl = new URL(url);
+    } catch {
+        return res.status(400).json({ error: 'Invalid url parameter' });
+    }
+
+    // SSRF protection: check hostname against whitelist
+    if (VIDEO_PROXY_WHITELIST.length > 0 && !VIDEO_PROXY_WHITELIST.includes(parsedUrl.hostname)) {
+        console.warn(`[Proxy] Blocked video request to non-whitelisted domain: ${parsedUrl.hostname}`);
+        return res.status(403).json({ error: 'Domain not allowed' });
+    }
+
     const cachePath = getCachePath(url);
 
     // Check if video is already cached locally
@@ -1186,11 +1203,16 @@ app.get('/api/proxy/video', async (req, res) => {
         return;
     }
 
-    // Fetch from remote and cache simultaneously
+    // Fetch from remote and cache simultaneously with timeout
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
     try {
         console.log(`[Proxy] Fetching and caching video: ${url}`);
 
-        const videoResponse = await fetch(url);
+        const videoResponse = await fetch(url, { signal: controller.signal });
+
+        clearTimeout(timeout);
 
         if (!videoResponse.ok) {
             return res.status(videoResponse.status).json({ error: 'Failed to fetch video' });
@@ -1220,7 +1242,15 @@ app.get('/api/proxy/video', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[Proxy] Video fetch error:', error);
+        clearTimeout(timeout);
+        if (error.name === 'AbortError') {
+            console.error(`[Proxy] Video fetch timeout: ${url}`);
+            return res.status(504).json({ error: 'Fetch timeout' });
+        }
+        console.error('[Proxy] Video fetch error:', error.message);
+        if (fs.existsSync(cachePath)) {
+            fs.unlinkSync(cachePath);
+        }
         res.status(500).json({ error: error.message });
     }
 });
