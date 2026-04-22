@@ -198,6 +198,23 @@
         .animate-pulse { animation: pulse 2s ease-in-out infinite; }
         @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
 
+        /* ===== Aurora Background Orbs ===== */
+        .aurora-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.8;
+            animation: auroraFloat 20s ease-in-out infinite;
+        }
+        .aurora-orb:nth-child(2) { animation-delay: -7s; }
+        .aurora-orb:nth-child(3) { animation-delay: -14s; }
+        @keyframes auroraFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(2%, 3%) scale(1.02); }
+            50% { transform: translate(-1%, 5%) scale(0.98); }
+            75% { transform: translate(3%, -2%) scale(1.01); }
+        }
+
         /* ===== Aurora Color Fallbacks (for app-frontend.js) ===== */
         .bg-aurora-purple { background-color: #8B5CF6; }
         .bg-aurora-pink { background-color: #EC4899; }
@@ -325,9 +342,12 @@
 <body class="font-sans min-h-screen overflow-x-hidden">
     <!-- Aurora Background -->
     <div class="fixed inset-0 -z-10 overflow-hidden">
-        <div class="absolute -top-1/3 -left-1/4 w-[700px] h-[700px] rounded-full" style="background: radial-gradient(circle, rgba(0,122,255,0.15) 0%, transparent 70%);"></div>
-        <div class="absolute -bottom-1/4 -right-1/4 w-[600px] h-[600px] rounded-full" style="background: radial-gradient(circle, rgba(191,90,242,0.12) 0%, transparent 70%);"></div>
-        <div class="absolute top-1/2 right-1/4 w-[400px] h-[400px] rounded-full" style="background: radial-gradient(circle, rgba(255,55,95,0.08) 0%, transparent 70%);"></div>
+        <!-- Animated gradient orbs -->
+        <div class="aurora-orb" style="top: -20%; left: -10%; width: 60vw; height: 60vw; background: radial-gradient(circle, rgba(0,122,255,0.12) 0%, transparent 60%);"></div>
+        <div class="aurora-orb" style="bottom: -20%; right: -10%; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(191,90,242,0.10) 0%, transparent 60%);"></div>
+        <div class="aurora-orb" style="top: 40%; left: 30%; width: 40vw; height: 40vw; background: radial-gradient(circle, rgba(255,55,95,0.06) 0%, transparent 60%);"></div>
+        <!-- Subtle grain overlay -->
+        <div class="absolute inset-0 opacity-[0.015]" style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 256 256%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E');"></div>
     </div>
 
     <div class="flex min-h-screen">

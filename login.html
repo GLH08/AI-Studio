@@ -132,16 +132,36 @@
         /* ===== Animations ===== */
         @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-20px) rotate(5deg); } }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes auroraFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(2%, 3%) scale(1.02); }
+            50% { transform: translate(-1%, 5%) scale(0.98); }
+            75% { transform: translate(3%, -2%) scale(1.01); }
+        }
         .animate-float { animation: float 8s ease-in-out infinite; }
         .animate-fade-in { animation: fadeIn 0.4s ease-out; }
         @media (prefers-reduced-motion: reduce) { .animate-float { animation: none; } }
+
+        /* ===== Aurora Background Orbs ===== */
+        .aurora-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.8;
+            animation: auroraFloat 20s ease-in-out infinite;
+        }
+        .aurora-orb:nth-child(2) { animation-delay: -7s; }
+        .aurora-orb:nth-child(3) { animation-delay: -14s; }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4 overflow-hidden">
     <!-- Aurora Background -->
-    <div class="fixed inset-0 -z-10">
-        <div class="absolute -top-1/3 -left-1/4 w-[700px] h-[700px] rounded-full" style="background: radial-gradient(circle, rgba(0,122,255,0.12) 0%, transparent 70%);"></div>
-        <div class="absolute -bottom-1/4 -right-1/4 w-[600px] h-[600px] rounded-full" style="background: radial-gradient(circle, rgba(191,90,242,0.10) 0%, transparent 70%);"></div>
+    <div class="fixed inset-0 -z-10 overflow-hidden">
+        <div class="aurora-orb" style="top: -20%; left: -10%; width: 60vw; height: 60vw; background: radial-gradient(circle, rgba(0,122,255,0.12) 0%, transparent 60%);"></div>
+        <div class="aurora-orb" style="bottom: -20%; right: -10%; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(191,90,242,0.10) 0%, transparent 60%);"></div>
+        <div class="aurora-orb" style="top: 40%; left: 30%; width: 40vw; height: 40vw; background: radial-gradient(circle, rgba(255,55,95,0.06) 0%, transparent 60%);"></div>
+        <!-- Subtle grain overlay -->
+        <div class="absolute inset-0 opacity-[0.015]" style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 256 256%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E');"></div>
     </div>
 
     <div class="w-full max-w-md">
@@ -177,8 +197,37 @@
         </p>
     </div>
 
+    <!-- Theme Toggle -->
+    <button id="theme-toggle" class="glass fixed bottom-6 right-6 w-12 h-12 flex items-center justify-center cursor-pointer transition-all hover:scale-105" style="border-radius: 50%;">
+        <i data-lucide="moon" class="w-5 h-5" id="theme-icon"></i>
+    </button>
+
     <script>
         lucide.createIcons();
+
+        // Theme toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const html = document.documentElement;
+
+        function setTheme(theme) {
+            html.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            if (theme === 'dark') {
+                themeIcon.setAttribute('data-lucide', 'moon');
+            } else {
+                themeIcon.setAttribute('data-lucide', 'sun');
+            }
+            lucide.createIcons();
+        }
+
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        setTheme(savedTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+        });
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
