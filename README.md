@@ -1,16 +1,17 @@
 # AI Studio (Multi-Provider Media Generator)
 
-基于多提供商架构的专业 AI 多媒体生成平台。完美支持 OpenAI、OpenAI-Compatible、Gemini 以及 Grok2API 等多种渠道，内置高级的文生图、图生图（图像编辑）、文生视频、图生视频等全维度多媒体生成能力。
+基于多提供商架构的专业 AI 图像生成平台。支持 OpenAI、OpenAI-Compatible、Gemini 多种渠道的文生图（Text-to-Image），并可手动收藏图片与视频链接，内置可选的 Chevereto 图床加速。
 
 [![Build and Push](https://github.com/GLH08/AI-Studio/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/GLH08/AI-Studio/actions/workflows/docker-publish.yml)
 
 ## 🌟 核心特性
 
-- **多模式生成系统**：单端实现文生图 (Text-to-Image)、图像编辑 (Image Edit)、文生视频 (Text-to-Video)、图生视频 (Image-to-Video)。
-- **原生 Grok2API 支持**：深度集成并兼容 Grok2API 的非标多模态及参数（智能处理 Base64 媒体直传、并发控制、多媒体时长/分辨率配置）。
-- **动态多渠道架构**：告别硬编码，支持无限个 `PROVIDER_X_*` 配置项，随时灵活添加不同的 API 渠道。
-- **现代化 UI 面板**：根据所选的渠道和生成模式，参数调节面板（如视频比例、时长选项、参考图强制约束等）会自适应呼出。
-- **Chevereto 图床集成**：支持一键上传图片和视频到私有 Chevereto 图床，加速多端浏览。
+- **文生图生成**：通过 OpenAI、OpenAI-Compatible（反代 Chat Completions）、Gemini 三类渠道实现文生图 (Text-to-Image)。
+- **图库与收藏**：生成结果自动入库；另可手动收藏外部图片链接、保存文生视频 / 图生视频链接，统一在画廊浏览。
+- **动态多渠道架构**：告别硬编码，支持最多 10 个 `PROVIDER_X_*` 配置项，随时灵活添加不同的 API 渠道。
+- **现代化 UI 面板**：玻璃拟态（Liquid Glass）界面，支持深浅色主题切换；OpenAI 渠道自动呼出 size / quality / style 参数。
+- **Chevereto 图床集成**：生成图片可一键并行上传到私有 Chevereto 图床，加速多端浏览。
+- **安全加固**：SSRF 域名白名单、HMAC 签名登录 Cookie（不再明文存储密码）、速率限制与 Helmet CSP。
 
 ## 🚀 快速开始
 
@@ -72,21 +73,18 @@ npm start
 |------|------|--------|------|
 | `PORT` | ❌ | 8787 | 平台的运行端口 |
 | `AUTH_PASSWORD` | ❌ | - | 设置此项将开启独立的访问密码墙 |
-| `RATE_LIMIT_MAX_REQUESTS` | ❌ | 100 | IP 速率限制，防止恶意并发调用 |
+| `RATE_LIMIT_MAX_REQUESTS` | ❌ | 500 | IP 速率限制，防止恶意并发调用 |
 
 ### 多提供商 (Provider) 配置示例
 | 变量 | 说明 | 示例值 |
 |------|------|--------|
-| `PROVIDER_X_NAME` | 渠道显示名称 | Grok2API |
-| `PROVIDER_X_TYPE` | 渠道后端类型 | enum: `openai`, `openai-compatible`, `gemini`, `grok2api` |
-| `PROVIDER_X_BASE_URL`| 服务基础地址 | `https://api.grok.com/v1` |
+| `PROVIDER_X_NAME` | 渠道显示名称 | OpenAI DALL·E |
+| `PROVIDER_X_TYPE` | 渠道后端类型 | enum: `openai`, `openai-compatible`, `gemini` |
+| `PROVIDER_X_BASE_URL`| 服务基础地址 | `https://api.openai.com/v1` |
 | `PROVIDER_X_API_KEY` | 鉴权密钥 | `sk-...` |
+| `PROVIDER_X_MODELS` | 模型列表（逗号分隔） | `dall-e-3,gpt-image-1` |
 
-**频道模型精确路由：**
-针对不同的图流模式，你在 `.env` 指定的模型将会智能分配到前端的不同 Tab 下签：
-- `PROVIDER_X_IMAGE_MODELS`：普通（文生图）模型，以逗号分隔。
-- `PROVIDER_X_IMAGE_EDIT_MODELS`：图生图（图像编辑）模型。
-- `PROVIDER_X_VIDEO_MODELS`：视频（文生视频 / 图生视频）模型。
+> 图像 / 视频代理与手动收藏可通过 `IMAGE_PROXY_WHITELIST`（逗号分隔的主机名）限制可访问的域名，留空则允许全部。
 
 ### Chevereto 图床配置（选填）
 如果你希望生成的图片和视频能拥有纯公共或加速连结：
@@ -96,46 +94,34 @@ npm start
 | `CHEVERETO_API_KEY` | Chevereto 的 API Key |
 | `CHEVERETO_ALBUM_ID` | 上传到的相册 ID（可选） |
 
-## 🔌 API 原生扩展文档
+## 🔌 API 文档
 
-### 高级多媒体内容生成
-平台提供了一个泛用的统合 endpoint，它会自动为你路由到底层对应的格式和引擎服务当中。
+### 文生图生成
+统合的图像生成 endpoint，根据所选 provider 的类型自动路由到对应适配器。
 
 ```bash
 POST /api/generate
 Content-Type: application/json
 
-# --- （一）通用文生图 ---
 {
-  "provider": "Grok2API",
-  "model": "grok-imagine-1.0",
-  "mode": "text-to-image",
+  "provider": "provider-1",
+  "model": "dall-e-3",
   "prompt": "Cyberpunk city night view",
-  "imageConfig": { "size": "1024x1024", "n": 1 }
+  "size": "1024x1024",     // 可选（仅 OpenAI 渠道）
+  "quality": "hd",          // 可选（仅 OpenAI 渠道）
+  "style": "vivid",         // 可选（仅 OpenAI 渠道）
+  "n": 1                     // 可选，生成数量
 }
+```
 
-# --- （二）图像编辑与修改（Image Edit） ---
-{
-  "provider": "Grok2API",
-  "model": "grok-imagine-1.0-edit",
-  "mode": "image-edit",
-  "prompt": "把背景的星空换成夕阳",
-  "sourceImageUrl": "https://example.com/source.jpg"
-}
+> 返回单张结果时为图片记录对象；`n > 1` 时返回 `{ results: [...], count }`。若配置了 Chevereto，生成图片会并行上传并改写为图床地址。
 
-# --- （三）文生视频 / 图生视频 ---
-{
-  "provider": "Grok2API",
-  "model": "grok-imagine-1.0-video",
-  "mode": "image-to-video", // 或 text-to-video
-  "prompt": "让镜头逐渐拉远",
-  "sourceImageUrl": "https://example.com/source.jpg", // 选填（仅 image-to-video 必须传）
-  "videoConfig": {
-    "aspect_ratio": "16:9",
-    "video_length": 6, // 6, 10, 15
-    "resolution_name": "720p" // 480p, 720p
-  }
-}
+### 手动收藏（图片 / 视频链接）
+
+```bash
+POST /api/images/manual            # { url, prompt, model?, aspectRatio? }
+POST /api/videos/text-to-video     # { url, prompt, model?, aspectRatio? }
+POST /api/videos/image-to-video    # { url, sourceImageUrl, prompt?, model?, aspectRatio? }
 ```
 
 ### 内容存储管理接口

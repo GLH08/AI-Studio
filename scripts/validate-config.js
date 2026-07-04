@@ -24,32 +24,19 @@ for (let i = 1; i <= 10; i++) {
         continue;
     }
 
-    const validTypes = ['openai', 'openai-compatible', 'gemini', 'grok2api'];
+    const validTypes = ['openai', 'openai-compatible', 'gemini'];
     if (!validTypes.includes(type)) {
         errors.push(`❌ Provider ${i} has invalid TYPE: "${type}". Valid: ${validTypes.join(', ')}`);
         continue;
     }
 
-    if (type === 'grok2api') {
-        const imgModels = process.env[`PROVIDER_${i}_IMAGE_MODELS`] || '';
-        const editModels = process.env[`PROVIDER_${i}_IMAGE_EDIT_MODELS`] || '';
-        const vidModels = process.env[`PROVIDER_${i}_VIDEO_MODELS`] || '';
-        const allModels = [imgModels, editModels, vidModels].filter(Boolean).join(',');
-        if (!allModels) {
-            errors.push(`❌ Provider ${i} (grok2api) has no models. Set IMAGE_MODELS, IMAGE_EDIT_MODELS, or VIDEO_MODELS.`);
-            continue;
-        }
-        providerCount++;
-        console.log(`✅ Provider ${i}: ${name} [${type}] — Image: ${imgModels || '—'} | Edit: ${editModels || '—'} | Video: ${vidModels || '—'}`);
-    } else {
-        const models = process.env[`PROVIDER_${i}_MODELS`];
-        if (!models) {
-            errors.push(`❌ Provider ${i} is missing MODELS.`);
-            continue;
-        }
-        providerCount++;
-        console.log(`✅ Provider ${i}: ${name} [${type}] — Models: ${models}`);
+    const models = process.env[`PROVIDER_${i}_MODELS`];
+    if (!models) {
+        errors.push(`❌ Provider ${i} is missing MODELS.`);
+        continue;
     }
+    providerCount++;
+    console.log(`✅ Provider ${i}: ${name} [${type}] — Models: ${models}`);
 }
 
 if (providerCount === 0) {
@@ -65,10 +52,10 @@ if (!process.env.AUTH_PASSWORD) {
     console.log('✅ AUTH_PASSWORD is configured');
 }
 
-if (process.env.LSKY_URL && !process.env.LSKY_TOKEN) {
-    warnings.push('⚠️  LSKY_URL set but LSKY_TOKEN missing — image hosting will not work');
-} else if (process.env.LSKY_URL && process.env.LSKY_TOKEN) {
-    console.log('✅ Lsky Pro is configured');
+if (process.env.CHEVERETO_URL && !process.env.CHEVERETO_API_KEY) {
+    warnings.push('⚠️  CHEVERETO_URL set but CHEVERETO_API_KEY missing — image hosting will not work');
+} else if (process.env.CHEVERETO_URL && process.env.CHEVERETO_API_KEY) {
+    console.log('✅ Chevereto is configured');
 }
 
 // Validate PORT

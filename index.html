@@ -259,23 +259,6 @@
         }
         .nav-btn i { width: 20px; height: 20px; }
 
-        /* ===== Mode Button ===== */
-        .mode-btn {
-            background: transparent;
-            color: var(--text-secondary);
-            transition: all 0.2s ease;
-            border: 1px solid transparent;
-        }
-        .mode-btn:hover {
-            background: var(--glass-bg-hover);
-            color: var(--text-primary);
-        }
-        .mode-btn.active {
-            background: linear-gradient(135deg, #007AFF 0%, #BF5AF2 100%);
-            color: white;
-            box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
-        }
-
         /* ===== Glass Card (for app-frontend.js) ===== */
         .glass-card {
             background: var(--glass-bg);
@@ -433,84 +416,10 @@
                                     <label class="text-sm font-medium text-secondary">Provider</label>
                                     <select id="provider" class="glass-select"></select>
                                 </div>
-                                <!-- Mode Tabs -->
-                                <div id="mode-tabs" class="hidden mb-5">
-                                    <label class="text-sm font-medium text-secondary mb-2 block">Mode</label>
-                                    <div class="glass flex gap-1 p-1 rounded-xl">
-                                        <button class="mode-btn flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all cursor-pointer" data-mode="text-to-image">Image</button>
-                                        <button class="mode-btn flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all cursor-pointer" data-mode="image-edit">Edit</button>
-                                        <button class="mode-btn flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all cursor-pointer" data-mode="text-to-video">T2V</button>
-                                        <button class="mode-btn flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all cursor-pointer" data-mode="image-to-video">I2V</button>
-                                    </div>
-                                </div>
                                 <!-- Model -->
                                 <div class="space-y-2 mb-5">
                                     <label class="text-sm font-medium text-secondary">Model</label>
                                     <select id="model" class="glass-select"></select>
-                                </div>
-                                <!-- Source Image URL -->
-                                <div id="control-source-image" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm font-medium text-secondary">Source Image URL</label>
-                                    <input id="source-image-url" type="url" placeholder="https://..." class="glass-input">
-                                </div>
-                                <!-- Grok Size -->
-                                <div id="control-grok-size" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm font-medium text-secondary">Size</label>
-                                    <select id="grok-size" class="glass-select">
-                                        <option value="1024x1024">1024×1024</option>
-                                        <option value="1280x720">1280×720</option>
-                                        <option value="720x1280">720×1280</option>
-                                        <option value="1792x1024">1792×1024</option>
-                                        <option value="1024x1792">1024×1792</option>
-                                    </select>
-                                </div>
-                                <!-- Image Count -->
-                                <div id="control-grok-n" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm font-medium text-secondary">Number of Images</label>
-                                    <select id="grok-n" class="glass-select">
-                                        <option value="1">1</option>
-                                        <option value="2">2</option>
-                                        <option value="3">3</option>
-                                        <option value="4">4</option>
-                                    </select>
-                                </div>
-                                <!-- Video Ratio -->
-                                <div id="control-video-ratio" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm font-medium text-secondary">Aspect Ratio</label>
-                                    <select id="video-ratio" class="glass-select">
-                                        <option value="3:2">3:2</option>
-                                        <option value="16:9">16:9</option>
-                                        <option value="9:16">9:16</option>
-                                        <option value="2:3">2:3</option>
-                                        <option value="1:1">1:1</option>
-                                    </select>
-                                </div>
-                                <!-- Video Duration -->
-                                <div id="control-video-duration" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm font-medium text-secondary">Duration</label>
-                                    <select id="video-duration" class="glass-select">
-                                        <option value="6">6 seconds</option>
-                                        <option value="10">10 seconds</option>
-                                        <option value="15">15 seconds</option>
-                                    </select>
-                                </div>
-                                <!-- Video Resolution -->
-                                <div id="control-video-resolution" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm font-medium text-secondary">Resolution</label>
-                                    <select id="video-resolution" class="glass-select">
-                                        <option value="480p">480p</option>
-                                        <option value="720p">720p</option>
-                                    </select>
-                                </div>
-                                <!-- Video Preset -->
-                                <div id="control-video-preset" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm font-medium text-secondary">Preset</label>
-                                    <select id="video-preset" class="glass-select">
-                                        <option value="custom">Custom</option>
-                                        <option value="fun">Fun</option>
-                                        <option value="normal">Normal</option>
-                                        <option value="spicy">Spicy</option>
-                                    </select>
                                 </div>
                                 <!-- Size -->
                                 <div id="control-size" class="space-y-2 mb-5 hidden">
@@ -568,7 +477,7 @@
                                     <p class="text-secondary max-w-sm mx-auto">Configure your settings and describe your vision to bring your imagination to life.</p>
                                 </div>
                                 <div id="loading" class="hidden text-center p-12">
-                                    <div class="w-16 h-16 mx-auto mb-6 rounded-full border-4" style="border-color: rgba(0,122,255,0.2); border-top-color: var(--accent-blue);" class="animate-spin"></div>
+                                    <div class="w-16 h-16 mx-auto mb-6 rounded-full border-4 animate-spin" style="border-color: rgba(0,122,255,0.2); border-top-color: var(--accent-blue);"></div>
                                     <p class="text-secondary">Creating your masterpiece...</p>
                                 </div>
                             </div>
@@ -726,7 +635,7 @@
         const themeIconSvg2 = document.getElementById('theme-icon-svg2');
         const html = document.documentElement;
 
-        const sunPath = '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>';
+        const sunPath = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>';
         const moonPath = '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>';
 
         function setTheme(theme) {

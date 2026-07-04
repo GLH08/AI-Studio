@@ -5,7 +5,6 @@ const previewArea = $('preview-area'), emptyState = $('empty-state'), loading = 
 const galleryGrid = $('gallery-grid'), collectionGallery = $('collection-gallery'), videoGallery = $('video-gallery');
 
 let providersData = [];
-let currentMode = 'text-to-image';
 
 // ==================== Image Proxy Helper ====================
 function getImageProxyUrl(url) {
@@ -48,48 +47,9 @@ async function loadProviders() {
 }
 
 function onProviderChange() {
-    const provider = getSelectedProvider();
-    const isGrok = provider?.type === 'grok2api';
-
-    // Show/hide mode tabs
-    $('mode-tabs').classList.toggle('hidden', !isGrok);
-
-    // Build mode tab visibility based on available models
-    if (isGrok) {
-        document.querySelectorAll('.mode-btn').forEach(btn => {
-            const mode = btn.dataset.mode;
-            let show = false;
-            if (mode === 'text-to-image') show = (provider.imageModels?.length > 0);
-            else if (mode === 'image-edit') show = (provider.imageEditModels?.length > 0);
-            else if (mode === 'text-to-video' || mode === 'image-to-video') show = (provider.videoModels?.length > 0);
-            btn.classList.toggle('hidden', !show);
-        });
-        // Default to first available mode
-        const visibleModes = [...document.querySelectorAll('.mode-btn:not(.hidden)')];
-        if (visibleModes.length > 0 && !visibleModes.find(b => b.dataset.mode === currentMode)) {
-            setMode(visibleModes[0].dataset.mode);
-        } else {
-            setMode(currentMode);
-        }
-    } else {
-        currentMode = 'text-to-image';
-        updateModels();
-        updateControls();
-    }
-}
-
-function setMode(mode) {
-    currentMode = mode;
-    document.querySelectorAll('.mode-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.mode === mode);
-    });
     updateModels();
     updateControls();
 }
-
-document.querySelectorAll('.mode-btn').forEach(btn => {
-    btn.addEventListener('click', () => setMode(btn.dataset.mode));
-});
 
 function getSelectedProvider() {
     const id = $('provider').value;
@@ -100,49 +60,22 @@ function updateModels() {
     const provider = getSelectedProvider();
     const sel = $('model');
     if (!provider) { sel.innerHTML = '<option value="">—</option>'; return; }
-
-    let models = provider.models;
-    if (provider.type === 'grok2api') {
-        if (currentMode === 'text-to-image') models = provider.imageModels || [];
-        else if (currentMode === 'image-edit') models = provider.imageEditModels || [];
-        else models = provider.videoModels || [];
-    }
-    sel.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join('');
+    sel.innerHTML = provider.models.map(m => `<option value="${m}">${m}</option>`).join('');
 }
 
 function updateControls() {
     const provider = getSelectedProvider();
     const type = provider?.type || '';
-    const isGrok = type === 'grok2api';
     const isOpenAI = type === 'openai';
-    const isImageMode = currentMode === 'text-to-image' || currentMode === 'image-edit';
-    const isVideoMode = currentMode === 'text-to-video' || currentMode === 'image-to-video';
-    const needsSourceImage = currentMode === 'image-edit' || currentMode === 'image-to-video';
 
     // OpenAI standard controls
     $('control-size').classList.toggle('hidden', !isOpenAI);
     $('control-quality').classList.toggle('hidden', !isOpenAI);
     $('control-style').classList.toggle('hidden', !isOpenAI);
-
-    // Grok2API image controls
-    $('control-grok-size').classList.toggle('hidden', !(isGrok && isImageMode));
-    $('control-grok-n').classList.toggle('hidden', !(isGrok && isImageMode));
-
-    // Grok2API video controls
-    $('control-video-ratio').classList.toggle('hidden', !(isGrok && isVideoMode));
-    $('control-video-duration').classList.toggle('hidden', !(isGrok && isVideoMode));
-    $('control-video-resolution').classList.toggle('hidden', !(isGrok && isVideoMode));
-    $('control-video-preset').classList.toggle('hidden', !(isGrok && isVideoMode));
-
-    // Source image
-    $('control-source-image').classList.toggle('hidden', !(isGrok && needsSourceImage));
 }
 
 $('provider').addEventListener('change', onProviderChange);
 $('model').addEventListener('change', updateControls);
-
-// Video duration slider
-// video duration event listener removed as it is now a select
 
 // ==================== Generate ====================
 generateBtn.addEventListener('click', async () => {
@@ -151,46 +84,16 @@ generateBtn.addEventListener('click', async () => {
     if (!model) { alert('Please select a model'); return; }
     if (!prompt) { alert('Please enter a prompt'); return; }
 
-    const providerObj = getSelectedProvider();
-    const isGrok = providerObj?.type === 'grok2api';
-    const needsSourceImage = currentMode === 'image-edit' || currentMode === 'image-to-video';
-
-    if (isGrok && needsSourceImage) {
-        const srcUrl = $('source-image-url').value.trim();
-        if (!srcUrl) { alert('Please enter a source image URL'); return; }
-    }
-
     generateBtn.disabled = true;
     loading.classList.remove('hidden');
     emptyState.classList.add('hidden');
     previewArea.querySelector('.result-card')?.remove();
 
     try {
-        const payload = { provider, model, prompt, mode: isGrok ? currentMode : 'text-to-image' };
-
-        if (isGrok) {
-            const isImageMode = currentMode === 'text-to-image' || currentMode === 'image-edit';
-            const isVideoMode = currentMode === 'text-to-video' || currentMode === 'image-to-video';
-
-            if (isImageMode) {
-                payload.imageConfig = { size: $('grok-size').value, n: parseInt($('grok-n').value) };
-            }
-            if (isVideoMode) {
-                payload.videoConfig = {
-                    aspect_ratio: $('video-ratio').value,
-                    seconds: parseInt($('video-duration').value),
-                    resolution_name: $('video-resolution').value,
-                    preset: $('video-preset').value
-                };
-            }
-            if (needsSourceImage) {
-                payload.sourceImageUrl = $('source-image-url').value.trim();
-            }
-        } else {
-            const size = $('size').value; if (size) payload.size = size;
-            const quality = $('quality').value; if (quality) payload.quality = quality;
-            const style = $('style').value; if (style) payload.style = style;
-        }
+        const payload = { provider, model, prompt, mode: 'text-to-image' };
+        const size = $('size').value; if (size) payload.size = size;
+        const quality = $('quality').value; if (quality) payload.quality = quality;
+        const style = $('style').value; if (style) payload.style = style;
 
         const res = await fetch('/api/generate', {
             method: 'POST',
@@ -217,10 +120,7 @@ generateBtn.addEventListener('click', async () => {
             renderPreview(data);
         }
 
-        // Reload relevant gallery
-        const isVideoResult = currentMode === 'text-to-video' || currentMode === 'image-to-video';
-        if (isVideoResult) loadVideos();
-        else loadGallery();
+        loadGallery();
 
     } catch (e) {
         console.error(e);
@@ -316,9 +216,9 @@ async function loadGallery() {
         const res = await fetch('/api/images');
         if (res.status === 401) { location.href = '/login.html'; return; }
         const images = (await res.json()).filter(i => i.source !== 'manual');
-        galleryGrid.innerHTML = images.length ? '' : `<p class="col-span-full text-center py-20" style="color: var(--text-tertiary);">No images yet</p>`;
+        galleryGrid.innerHTML = images.length ? '' : '<p class="col-span-full text-center py-20" style="color: var(--text-tertiary);">No images yet</p>';
         images.forEach(img => renderCard(img, galleryGrid, 'image'));
-    } catch { galleryGrid.innerHTML = `<p class="col-span-full text-center py-20" style="color: #EF4444;">Failed to load</p>`; }
+    } catch { galleryGrid.innerHTML = '<p class="col-span-full text-center py-20" style="color: #EF4444;">Failed to load</p>'; }
 }
 
 async function loadCollection() {
@@ -327,9 +227,9 @@ async function loadCollection() {
         const res = await fetch('/api/images');
         if (res.status === 401) { location.href = '/login.html'; return; }
         const images = (await res.json()).filter(i => i.source === 'manual');
-        collectionGallery.innerHTML = images.length ? '' : `<p class="col-span-full text-center py-20" style="color: var(--text-tertiary);">No collection yet</p>`;
+        collectionGallery.innerHTML = images.length ? '' : '<p class="col-span-full text-center py-20" style="color: var(--text-tertiary);">No collection yet</p>';
         images.forEach(img => renderCard(img, collectionGallery, 'image'));
-    } catch { collectionGallery.innerHTML = `<p class="col-span-full text-center py-20" style="color: #EF4444;">Failed to load</p>`; }
+    } catch { collectionGallery.innerHTML = '<p class="col-span-full text-center py-20" style="color: #EF4444;">Failed to load</p>'; }
 }
 
 async function loadVideos() {
@@ -338,9 +238,9 @@ async function loadVideos() {
         const res = await fetch('/api/videos');
         if (res.status === 401) { location.href = '/login.html'; return; }
         const videos = await res.json();
-        videoGallery.innerHTML = videos.length ? '' : `<p class="col-span-full text-center py-20" style="color: var(--text-tertiary);">No videos yet</p>`;
+        videoGallery.innerHTML = videos.length ? '' : '<p class="col-span-full text-center py-20" style="color: var(--text-tertiary);">No videos yet</p>';
         videos.forEach(v => renderCard(v, videoGallery, 'video'));
-    } catch { videoGallery.innerHTML = `<p class="col-span-full text-center py-20" style="color: #EF4444;">Failed to load</p>`; }
+    } catch { videoGallery.innerHTML = '<p class="col-span-full text-center py-20" style="color: #EF4444;">Failed to load</p>'; }
 }
 
 // ==================== Unified Card Renderer ====================
@@ -381,7 +281,7 @@ function renderCard(data, container, type) {
             <div class="flex items-center justify-between pt-2" style="border-top: 1px solid var(--glass-border);">
                 <span class="text-[10px]" style="color: var(--text-tertiary);">${date.toLocaleDateString('zh-CN')}</span>
                 <div class="flex gap-1">
-                    ${data.prompt ? `<button class="copy-btn action-btn w-8 h-8 flex items-center justify-center cursor-pointer" title="Copy Prompt"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>` : ''}
+                    ${data.prompt ? '<button class="copy-btn action-btn w-8 h-8 flex items-center justify-center cursor-pointer" title="Copy Prompt"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>' : ''}
                     <a href="${url}" target="_blank" class="open-btn action-btn w-8 h-8 flex items-center justify-center" title="Open in New Tab"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg></a>
                     <button class="hide-btn action-btn w-8 h-8 flex items-center justify-center cursor-pointer" title="${isHidden ? 'Unhide' : 'Hide'}"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${isHidden ? '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>' : '<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/>'}</svg></button>
                     <button class="delete-btn action-btn w-8 h-8 flex items-center justify-center cursor-pointer" title="Delete" style="--glass-bg: rgba(239,68,68,0.1);"><svg class="w-4 h-4" style="color: #EF4444;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>

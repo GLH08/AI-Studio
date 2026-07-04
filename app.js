@@ -16,11 +16,27 @@ import morgan from 'morgan';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// True only when run directly (node app.js); false when imported by tests
+const isMainModule = process.argv[1] === __filename;
+
 const app = express();
 const PORT = process.env.PORT || 8787;
 const AUTH_PASSWORD = process.env.AUTH_PASSWORD;
+// Signed token stored in the auth cookie instead of the plaintext password.
+// Deterministic (keyed by the password) so 30-day sessions survive restarts,
+// while the password itself is never written to a cookie.
+const AUTH_TOKEN = AUTH_PASSWORD
+    ? crypto.createHmac('sha256', AUTH_PASSWORD).update('ai-studio-auth-v1').digest('hex')
+    : null;
 const DATA_DIR = path.join(__dirname, 'data');
-const DB_FILE = path.join(DATA_DIR, 'db.json');
+const DB_FILE = process.env.DB_FILE || path.join(DATA_DIR, 'db.json');
+
+// Constant-time string comparison (guards against timing attacks; safe on unequal lengths)
+function timingSafeEqualStr(a, b) {
+    const ab = Buffer.from(String(a));
+    const bb = Buffer.from(String(b));
+    return ab.length === bb.length && crypto.timingSafeEqual(ab, bb);
+}
 
 // Image proxy whitelist (comma-separated domains)
 const IMAGE_PROXY_WHITELIST = (process.env.IMAGE_PROXY_WHITELIST || '').split(',').map(d => d.trim()).filter(Boolean);
@@ -71,32 +87,19 @@ function loadProviders() {
 
         if (!name || !type || !baseUrl || !apiKey) continue;
 
-        const validTypes = ['openai', 'openai-compatible', 'gemini', 'grok2api'];
+        const validTypes = ['openai', 'openai-compatible', 'gemini'];
         if (!validTypes.includes(type)) {
             console.warn(`⚠️ Provider ${i} has invalid type: ${type}. Skipping.`);
             continue;
         }
 
-        if (type === 'grok2api') {
-            const imageModels = parseModels(process.env[`PROVIDER_${i}_IMAGE_MODELS`]);
-            const imageEditModels = parseModels(process.env[`PROVIDER_${i}_IMAGE_EDIT_MODELS`]);
-            const videoModels = parseModels(process.env[`PROVIDER_${i}_VIDEO_MODELS`]);
-            const allModels = [...imageModels, ...imageEditModels, ...videoModels];
-            if (allModels.length === 0) continue;
-            providers.push({
-                id: `provider-${i}`, name, type,
-                baseUrl: baseUrl.replace(/\/$/, ''), apiKey,
-                models: allModels, imageModels, imageEditModels, videoModels
-            });
-        } else {
-            const models = parseModels(process.env[`PROVIDER_${i}_MODELS`]);
-            if (models.length === 0) continue;
-            providers.push({
-                id: `provider-${i}`, name, type,
-                baseUrl: baseUrl.replace(/\/$/, ''), apiKey,
-                models, imageModels: models, imageEditModels: [], videoModels: []
-            });
-        }
+        const models = parseModels(process.env[`PROVIDER_${i}_MODELS`]);
+        if (models.length === 0) continue;
+        providers.push({
+            id: `provider-${i}`, name, type,
+            baseUrl: baseUrl.replace(/\/$/, ''), apiKey,
+            models
+        });
     }
     return providers;
 }
@@ -152,8 +155,7 @@ app.use((req, res, next) => {
         return next();
     }
 
-    const authCookie = req.cookies.auth;
-    if (authCookie === AUTH_PASSWORD) {
+    if (timingSafeEqualStr(req.cookies.auth, AUTH_TOKEN)) {
         return next();
     }
 
@@ -183,7 +185,7 @@ app.use(express.static(__dirname));
 app.post('/api/login', (req, res) => {
     const { password } = req.body;
     if (password === AUTH_PASSWORD) {
-        res.cookie('auth', password, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 });
+        res.cookie('auth', AUTH_TOKEN, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 });
         res.json({ success: true });
     } else {
         res.status(401).json({ error: 'Invalid password' });
@@ -208,7 +210,11 @@ function readDb() {
 }
 
 function writeDb(data) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+    // Atomic write: serialize to a temp file, then rename over the target so an
+    // interrupted write can never leave a half-written / corrupt db.json.
+    const tmp = `${DB_FILE}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
+    fs.renameSync(tmp, DB_FILE);
 }
 
 function addImageToDb(image) {
@@ -222,9 +228,9 @@ function addImageToDb(image) {
         }
 
         db.images.unshift(image);
-        writeDb(db);
         db.statistics.total = (db.statistics.total || 0) + 1;
         db.statistics.byModel[image.model] = (db.statistics.byModel[image.model] || 0) + 1;
+        writeDb(db);
         console.log(`✅ Image saved to database: ${image.model} (Total: ${db.statistics.total})`);
     } catch (error) {
         console.error('❌ Failed to save image to database:', error);
@@ -239,9 +245,9 @@ function addVideoToDb(video) {
         if (!db.statistics.videoByModel) db.statistics.videoByModel = {};
 
         db.videos.unshift(video);
-        writeDb(db);
         db.statistics.videoTotal = (db.statistics.videoTotal || 0) + 1;
         db.statistics.videoByModel[video.model] = (db.statistics.videoByModel[video.model] || 0) + 1;
+        writeDb(db);
         console.log(`✅ Video saved to database: ${video.model} (Total: ${db.statistics.videoTotal})`);
     } catch (error) {
         console.error('❌ Failed to save video to database:', error);
@@ -475,289 +481,6 @@ async function callGemini(provider, params) {
 }
 
 /**
- * Grok2API v2 dedicated adapter
- * Supports: text-to-image, image-edit, text-to-video, image-to-video
- * Uses dedicated endpoints: /v1/images/generations, /v1/images/edits, /v1/videos
- */
-async function callGrok2API(provider, params) {
-    const mode = params.mode || 'text-to-image';
-    const isVideo = mode === 'text-to-video' || mode === 'image-to-video';
-    const isEdit = mode === 'image-edit';
-
-    console.log(`[Grok2API] ${mode} → model=${params.model}`);
-
-    if (isVideo) {
-        return await callGrok2APIVideo(provider, params);
-    } else if (isEdit) {
-        return await callGrok2APIImageEdit(provider, params);
-    } else {
-        return await callGrok2APIImageGenerate(provider, params);
-    }
-}
-
-/**
- * Image generation via /v1/images/generations
- */
-async function callGrok2APIImageGenerate(provider, params) {
-    const url = `${provider.baseUrl}/images/generations`;
-
-    const body = {
-        model: params.model,
-        prompt: params.prompt,
-        n: parseInt(params.imageConfig?.n) || 1,
-        size: params.imageConfig?.size || '1024x1024',
-        response_format: 'url'
-    };
-
-    console.log(`[Grok2API] Image Generate → ${url} model=${params.model}`);
-
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${provider.apiKey}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-    });
-
-    if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Grok2API image error ${response.status}: ${text}`);
-    }
-
-    const result = await response.json();
-
-    if (!result.data || result.data.length === 0) {
-        throw new Error('No images returned from Grok2API');
-    }
-
-    const urls = result.data.map(item => item.url || item.b64_json);
-    const rawContent = JSON.stringify(result);
-
-    return { url: urls[0], allUrls: urls, rawContent, isVideo: false };
-}
-
-/**
- * Image edit via /v1/images/edits (multipart form-data)
- */
-async function callGrok2APIImageEdit(provider, params) {
-    const url = `${provider.baseUrl}/images/edits`;
-
-    // Download source image and convert to base64
-    let sourceImageData = null;
-    if (params.sourceImageUrl) {
-        // SSRF protection: validate source URL against whitelist
-        if (!isUrlAllowed(params.sourceImageUrl, IMAGE_PROXY_WHITELIST)) {
-            throw new Error('Source image URL domain not allowed');
-        }
-        try {
-            const imgRes = await fetch(params.sourceImageUrl);
-            const imgBuf = await imgRes.arrayBuffer();
-            const mimeType = imgRes.headers.get('content-type') || 'image/jpeg';
-            sourceImageData = {
-                mimeType,
-                base64: Buffer.from(imgBuf).toString('base64')
-            };
-        } catch (e) {
-            console.error('[Grok2API] Failed to download source image:', e.message);
-            throw new Error('Failed to download source image for editing');
-        }
-    } else {
-        throw new Error('Image edit requires a source image');
-    }
-
-    const formData = new FormData();
-    formData.append('model', params.model);
-    formData.append('prompt', params.prompt);
-    // API expects image[] (array format)
-    formData.append('image[]', Buffer.from(sourceImageData.base64, 'base64'), {
-        filename: 'source.png',
-        contentType: sourceImageData.mimeType
-    });
-    formData.append('n', parseInt(params.imageConfig?.n) || 1);
-    formData.append('size', params.imageConfig?.size || '1024x1024');
-    formData.append('response_format', 'url');
-
-    console.log(`[Grok2API] Image Edit → ${url} model=${params.model}`);
-
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${provider.apiKey}`
-        },
-        body: formData
-    });
-
-    if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Grok2API image edit error ${response.status}: ${text}`);
-    }
-
-    const result = await response.json();
-
-    if (!result.data || result.data.length === 0) {
-        throw new Error('No images returned from Grok2API edit');
-    }
-
-    const urls = result.data.map(item => item.url || item.b64_json);
-    const rawContent = JSON.stringify(result);
-
-    return { url: urls[0], allUrls: urls, rawContent, isVideo: false };
-}
-
-/**
- * Video generation via /v1/videos (multipart form-data) + polling
- */
-
-// Map aspect_ratio from frontend to grok2api v2 size format
-const ASPECT_RATIO_TO_SIZE = {
-    '3:2': '1792x1024',   // landscape 3:2
-    '16:9': '1280x720',   // landscape 16:9
-    '9:16': '720x1280',   // portrait 9:16
-    '2:3': '1024x1792',   // portrait 2:3
-    '1:1': '1024x1024'    // square
-};
-
-function convertAspectRatioToSize(aspectRatio) {
-    return ASPECT_RATIO_TO_SIZE[aspectRatio] || '720x1280';
-}
-
-async function callGrok2APIVideo(provider, params) {
-    const createUrl = `${provider.baseUrl}/videos`;
-    const hasSourceImage = params.sourceImageUrl && params.mode === 'image-to-video';
-
-    // Prepare source image for image-to-video
-    let sourceImageBase64 = null;
-    if (hasSourceImage && params.sourceImageUrl) {
-        // SSRF protection: validate source URL against whitelist
-        if (!isUrlAllowed(params.sourceImageUrl, IMAGE_PROXY_WHITELIST)) {
-            throw new Error('Source image URL domain not allowed');
-        }
-        try {
-            const imgRes = await fetch(params.sourceImageUrl);
-            const imgBuf = await imgRes.arrayBuffer();
-            const mimeType = imgRes.headers.get('content-type') || 'image/jpeg';
-            sourceImageBase64 = {
-                mimeType,
-                data: Buffer.from(imgBuf).toString('base64')
-            };
-        } catch {
-            console.error('[Grok2API] Failed to download source image');
-            throw new Error('Failed to download source image for video generation');
-        }
-    }
-
-    // Convert aspect_ratio to size format for grok2api v2
-    const size = convertAspectRatioToSize(params.videoConfig?.aspect_ratio);
-
-    // Build form data for video creation
-    const formData = new FormData();
-    formData.append('model', params.model);
-    formData.append('prompt', params.prompt);
-
-    if (hasSourceImage && sourceImageBase64) {
-        // API expects input_reference field for image-to-video
-        formData.append('input_reference', Buffer.from(sourceImageBase64.data, 'base64'), {
-            filename: 'source.png',
-            contentType: sourceImageBase64.mimeType
-        });
-    }
-
-    // Use 'seconds' parameter for grok2api v2
-    formData.append('seconds', parseInt(params.videoConfig?.seconds) || 6);
-    formData.append('size', size);
-    formData.append('resolution_name', params.videoConfig?.resolution_name || '720p');
-    formData.append('preset', params.videoConfig?.preset || 'custom');
-
-    console.log(`[Grok2API] Video Create → ${createUrl} model=${params.model}`);
-
-    const createResponse = await fetch(createUrl, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${provider.apiKey}`
-        },
-        body: formData
-    });
-
-    if (!createResponse.ok) {
-        const text = await createResponse.text();
-        throw new Error(`Grok2API video error ${createResponse.status}: ${text}`);
-    }
-
-    const job = await createResponse.json();
-
-    if (!job.id) {
-        throw new Error('No video job ID returned');
-    }
-
-    console.log(`[Grok2API] Video job created: ${job.id}, polling for completion...`);
-
-    // Poll for video completion
-    const videoUrl = await pollVideoCompletion(provider, job.id);
-
-    return {
-        url: videoUrl,
-        allUrls: [videoUrl],
-        rawContent: JSON.stringify(job),
-        isVideo: true
-    };
-}
-
-/**
- * Poll video job status until completed
- */
-async function pollVideoCompletion(provider, videoId, maxAttempts = 60, intervalMs = 3000) {
-    const statusUrl = `${provider.baseUrl}/videos/${videoId}`;
-
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        console.log(`[Grok2API] Polling video status: ${videoId} (attempt ${attempt + 1}/${maxAttempts})`);
-
-        const response = await fetch(statusUrl, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${provider.apiKey}`
-            }
-        });
-
-        if (!response.ok) {
-            const text = await response.text();
-            throw new Error(`Grok2API video status error ${response.status}: ${text}`);
-        }
-
-        const job = await response.json();
-
-        if (job.status === 'completed') {
-            // Use /v1/files/video format (same as Cherry Studio) - extract ID without "video_" prefix
-            // The job ID is like "video_9388d8ad..." but files are stored as "9388d8ad..."
-            const fileId = videoId.startsWith('video_') ? videoId.slice(6) : videoId;
-            const contentUrl = `${provider.baseUrl}/files/video?id=${fileId}`;
-            console.log(`[Grok2API] Video completed: ${videoId}, content URL: ${contentUrl}`);
-            return contentUrl;
-        }
-
-        if (job.status === 'failed') {
-            throw new Error(`Video generation failed: ${job.error?.message || 'Unknown error'}`);
-        }
-
-        if (job.status === 'in_progress' || job.status === 'queued') {
-            console.log(`[Grok2API] Video ${job.status}, progress: ${job.progress || 0}%`);
-            await sleep(intervalMs);
-            continue;
-        }
-
-        // Unknown status, wait and retry
-        console.log(`[Grok2API] Unknown video status: ${job.status}, retrying...`);
-        await sleep(intervalMs);
-    }
-
-    throw new Error(`Video generation timeout after ${maxAttempts} attempts`);
-}
-
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-/**
  * Route to the correct adapter based on provider type
  */
 async function callProvider(provider, params) {
@@ -768,8 +491,6 @@ async function callProvider(provider, params) {
         return await callOpenAICompatible(provider, params);
     case 'gemini':
         return await callGemini(provider, params);
-    case 'grok2api':
-        return await callGrok2API(provider, params);
     default:
         throw new Error(`Unsupported provider type: ${provider.type}`);
     }
@@ -796,7 +517,7 @@ async function uploadToChevereto(fileUrl, isVideo = false, providerApiKey = null
     try {
         console.log(`Downloading file from: ${fileUrl}`);
         const headers = {};
-        // Pass provider API key for authentication when downloading from upstream (e.g., grok2api)
+        // Pass provider API key for authentication when downloading from upstream
         if (providerApiKey) {
             headers['Authorization'] = `Bearer ${providerApiKey}`;
         }
@@ -862,21 +583,14 @@ app.get('/api/providers', (req, res) => {
         id: p.id,
         name: p.name,
         type: p.type,
-        models: p.models,
-        imageModels: p.imageModels || p.models,
-        imageEditModels: p.imageEditModels || [],
-        videoModels: p.videoModels || []
+        models: p.models
     }));
     res.json(providers);
 });
 
-// Generate Endpoint (image / image-edit / video)
+// Generate Endpoint (text-to-image)
 app.post('/api/generate', async (req, res) => {
-    const {
-        provider: providerId, model, prompt, mode,
-        size, quality, style, n,
-        sourceImageUrl, imageConfig, videoConfig
-    } = req.body;
+    const { provider: providerId, model, prompt, size, quality, style, n } = req.body;
 
     if (!providerId) return res.status(400).json({ error: 'Missing provider.' });
     const provider = getProvider(providerId);
@@ -885,60 +599,35 @@ app.post('/api/generate', async (req, res) => {
     if (!provider.models.includes(model)) return res.status(400).json({ error: `Model "${model}" not available.` });
     if (!prompt) return res.status(400).json({ error: 'Missing prompt.' });
 
-    const genMode = mode || 'text-to-image';
-
     try {
-        console.log(`[Generate] provider=${provider.name} type=${provider.type} model=${model} mode=${genMode}`);
+        console.log(`[Generate] provider=${provider.name} type=${provider.type} model=${model}`);
 
-        const result = await callProvider(provider, {
-            model, prompt, mode: genMode,
-            size, quality, style, n: n || 1,
-            sourceImageUrl, imageConfig, videoConfig
-        });
+        const result = await callProvider(provider, { model, prompt, size, quality, style, n: n || 1 });
 
-        const isVideoResult = result.isVideo || genMode === 'text-to-video' || genMode === 'image-to-video';
         const allUrls = result.allUrls || [result.url];
         const timestamp = new Date().toISOString();
-        const records = [];
 
-        for (const mediaUrl of allUrls) {
-            // Upload to Chevereto (pass provider API key for authentication when downloading)
+        // Upload all images to Chevereto in parallel (falls back to original URL on failure)
+        const records = await Promise.all(allUrls.map(async (mediaUrl) => {
             let cheveretoUrl = null;
             try {
-                cheveretoUrl = await uploadToChevereto(mediaUrl, isVideoResult, provider.apiKey);
+                cheveretoUrl = await uploadToChevereto(mediaUrl, false, provider.apiKey);
             } catch (e) {
                 console.error('Chevereto upload failed', e);
             }
+            const id = 'gen-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            return {
+                id, url: cheveretoUrl || mediaUrl,
+                prompt, model,
+                provider: provider.name, providerType: provider.type,
+                size: size || null,
+                quality: quality || null, style: style || null,
+                timestamp, hidden: false,
+            };
+        }));
 
-            const id = (isVideoResult ? 'video-gen-' : 'gen-') + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-
-            if (isVideoResult) {
-                // For videos: store Chevereto URL if available, otherwise store original URL
-                // The frontend will wrap with proxy for playback via /api/proxy/video
-                const videoUrl = cheveretoUrl || mediaUrl;
-                const videoRecord = {
-                    id, url: videoUrl, prompt, model,
-                    provider: provider.name, providerType: provider.type,
-                    sourceImageUrl: sourceImageUrl || null,
-                    aspectRatio: videoConfig?.aspect_ratio || null,
-                    type: sourceImageUrl ? 'image-to-video' : 'text-to-video',
-                    timestamp, hidden: false, source: 'generated'
-                };
-                addVideoToDb(videoRecord);
-                records.push(videoRecord);
-            } else {
-                const imageRecord = {
-                    id, url: cheveretoUrl || mediaUrl,
-                    prompt, model,
-                    provider: provider.name, providerType: provider.type,
-                    size: imageConfig?.size || size || null,
-                    quality: quality || null, style: style || null,
-                    timestamp, hidden: false,
-                };
-                addImageToDb(imageRecord);
-                records.push(imageRecord);
-            }
-        }
+        // Persist in original order (newest ends up first via unshift)
+        records.forEach(addImageToDb);
 
         res.json(records.length === 1 ? records[0] : { results: records, count: records.length });
 
@@ -975,8 +664,7 @@ app.post('/api/images/manual', (req, res) => {
         return res.status(400).json({ error: 'Invalid URL format.' });
     }
 
-    const parsedUrl = new URL(url);
-    if (IMAGE_PROXY_WHITELIST.length > 0 && !IMAGE_PROXY_WHITELIST.includes(parsedUrl.hostname)) {
+    if (!isUrlAllowed(url, IMAGE_PROXY_WHITELIST)) {
         return res.status(403).json({ error: 'Domain not allowed. Please use a whitelisted domain.' });
     }
 
@@ -1064,8 +752,7 @@ app.post('/api/videos/text-to-video', (req, res) => {
         return res.status(400).json({ error: 'Invalid video URL format.' });
     }
 
-    const parsedUrl = new URL(url);
-    if (IMAGE_PROXY_WHITELIST.length > 0 && !IMAGE_PROXY_WHITELIST.includes(parsedUrl.hostname)) {
+    if (!isUrlAllowed(url, IMAGE_PROXY_WHITELIST)) {
         return res.status(403).json({ error: 'Domain not allowed. Please use a whitelisted domain.' });
     }
 
@@ -1185,19 +872,19 @@ if (!fs.existsSync(IMAGE_CACHE_DIR)) {
 
 const VIDEO_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-// Clean up old cached videos on startup
-function cleanVideoCache() {
+// Clean up old cached videos (async so it never blocks startup)
+async function cleanVideoCache() {
     try {
         const now = Date.now();
-        const files = fs.readdirSync(VIDEO_CACHE_DIR);
+        const files = await fs.promises.readdir(VIDEO_CACHE_DIR);
         let cleaned = 0;
         let cleanedBytes = 0;
         for (const file of files) {
             const filePath = path.join(VIDEO_CACHE_DIR, file);
-            const stat = fs.statSync(filePath);
+            const stat = await fs.promises.stat(filePath);
             if (now - stat.mtimeMs > VIDEO_CACHE_MAX_AGE_MS) {
                 cleanedBytes += stat.size;
-                fs.unlinkSync(filePath);
+                await fs.promises.unlink(filePath);
                 cleaned++;
             }
         }
@@ -1208,7 +895,6 @@ function cleanVideoCache() {
         console.error('[Proxy] Video cache cleanup error:', err.message);
     }
 }
-cleanVideoCache();
 
 // Simple URL-to-filename mapping (hash the URL for safe filename)
 function getCachePath(videoUrl) {
@@ -1238,7 +924,7 @@ app.get('/api/proxy/video', async (req, res) => {
     }
 
     // SSRF protection: check hostname against whitelist
-    if (VIDEO_PROXY_WHITELIST.length > 0 && !VIDEO_PROXY_WHITELIST.includes(parsedUrl.hostname)) {
+    if (!isUrlAllowed(url, VIDEO_PROXY_WHITELIST)) {
         console.warn(`[Proxy] Blocked video request to non-whitelisted domain: ${parsedUrl.hostname}`);
         return res.status(403).json({ error: 'Domain not allowed' });
     }
@@ -1313,19 +999,19 @@ app.get('/api/proxy/video', async (req, res) => {
 
 const IMAGE_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-// Clean up old cached images on startup
-function cleanImageCache() {
+// Clean up old cached images (async so it never blocks startup)
+async function cleanImageCache() {
     try {
         const now = Date.now();
-        const files = fs.readdirSync(IMAGE_CACHE_DIR);
+        const files = await fs.promises.readdir(IMAGE_CACHE_DIR);
         let cleaned = 0;
         let cleanedBytes = 0;
         for (const file of files) {
             const filePath = path.join(IMAGE_CACHE_DIR, file);
-            const stat = fs.statSync(filePath);
+            const stat = await fs.promises.stat(filePath);
             if (now - stat.mtimeMs > IMAGE_CACHE_MAX_AGE_MS) {
                 cleanedBytes += stat.size;
-                fs.unlinkSync(filePath);
+                await fs.promises.unlink(filePath);
                 cleaned++;
             }
         }
@@ -1336,7 +1022,6 @@ function cleanImageCache() {
         console.error('[Proxy] Cache cleanup error:', err.message);
     }
 }
-cleanImageCache();
 
 app.get('/api/proxy/image', async (req, res) => {
     const { url } = req.query;
@@ -1353,7 +1038,7 @@ app.get('/api/proxy/image', async (req, res) => {
     }
 
     // SSRF protection: check hostname against whitelist
-    if (IMAGE_PROXY_WHITELIST.length > 0 && !IMAGE_PROXY_WHITELIST.includes(parsedUrl.hostname)) {
+    if (!isUrlAllowed(url, IMAGE_PROXY_WHITELIST)) {
         console.warn(`[Proxy] Blocked request to non-whitelisted domain: ${parsedUrl.hostname}`);
         return res.status(403).json({ error: 'Domain not allowed' });
     }
@@ -1449,7 +1134,7 @@ app.post('/api/upload', async (req, res) => {
 
 // ==================== Server Startup ====================
 
-app.listen(PORT, () => {
+function onListening() {
     console.log('==============================================');
     console.log('🚀 AI Studio v3.0.0');
     console.log('==============================================');
@@ -1463,13 +1148,7 @@ app.listen(PORT, () => {
         console.log(`🤖 Configured Providers (${PROVIDERS.length}):`);
         PROVIDERS.forEach(p => {
             console.log(`   • ${p.name} [${p.type}]`);
-            if (p.type === 'grok2api') {
-                if (p.imageModels.length) console.log(`     Image: ${p.imageModels.join(', ')}`);
-                if (p.imageEditModels.length) console.log(`     Edit:  ${p.imageEditModels.join(', ')}`);
-                if (p.videoModels.length) console.log(`     Video: ${p.videoModels.join(', ')}`);
-            } else {
-                console.log(`     Models: ${p.models.join(', ')}`);
-            }
+            console.log(`     Models: ${p.models.join(', ')}`);
         });
     }
     console.log('==============================================');
@@ -1482,4 +1161,23 @@ app.listen(PORT, () => {
     console.log('   • POST /api/images/manual - Add manual image');
     console.log('   • GET  /api/videos - List videos');
     console.log('==============================================');
-});
+
+    // Background cache cleanup (async — never blocks startup)
+    cleanVideoCache();
+    cleanImageCache();
+}
+
+if (isMainModule) {
+    app.listen(PORT, onListening);
+}
+
+export {
+    app,
+    readDb,
+    writeDb,
+    addImageToDb,
+    addVideoToDb,
+    loadProviders,
+    parseModels,
+    isUrlAllowed
+};
