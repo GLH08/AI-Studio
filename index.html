@@ -3,679 +3,642 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Studio</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M15.477 0c.415 0 .749.338.788.752a7.775 7.775 0 006.985 6.984c.413.04.752.373.752.788v6.952c0 .415-.338.748-.752.788a7.775 7.775 0 00-6.985 6.984c-.04.414-.373.752-.788.752H8.525c-.416 0-.749-.338-.789-.752a7.775 7.775 0 00-6.984-6.984c-.414-.04-.752-.373-.752-.788V8.524c0-.415.338-.748.752-.788A7.775 7.775 0 007.736.752C7.776.338 8.11 0 8.526 0h6.95z' fill='%238B5CF6'/%3E%3C/svg%3E">
+    <title>AI Studio — Create</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
-                    fontFamily: { serif: ['Playfair Display', 'serif'], sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'] },
-                    colors: {
-                        accent: { blue: '#007AFF', purple: '#BF5AF2', pink: '#FF375F', cyan: '#5AC8FA' }
-                    }
+                    fontFamily: { sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'] },
                 }
             }
         }
     </script>
     <style>
-        /* ===== CSS Variables - Dark Theme ===== */
-        [data-theme="dark"] {
-            --glass-bg: rgba(255, 255, 255, 0.08);
-            --glass-bg-hover: rgba(255, 255, 255, 0.12);
-            --glass-bg-active: rgba(255, 255, 255, 0.16);
-            --glass-border: rgba(255, 255, 255, 0.14);
-            --glass-border-strong: rgba(255, 255, 255, 0.24);
-            --text-primary: rgba(255, 255, 255, 0.95);
-            --text-secondary: rgba(255, 255, 255, 0.65);
-            --text-tertiary: rgba(255, 255, 255, 0.45);
-            --bg-primary: #1c1c1e;
-            --bg-secondary: #2c2c2e;
-            --bg-tertiary: #3a3a3c;
-            --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            --shadow-button: 0 4px 16px rgba(0, 122, 255, 0.35);
-            --overlay-bg: rgba(0, 0, 0, 0.5);
+        :root {
+            --bg-deep: #050505;
+            --accent-blue: #0A84FF;
+            --accent-purple: #BF5AF2;
+            --accent-pink: #FF375F;
         }
 
-        /* ===== CSS Variables - Light Theme ===== */
-        [data-theme="light"] {
-            --glass-bg: rgba(255, 255, 255, 0.70);
-            --glass-bg-hover: rgba(255, 255, 255, 0.85);
-            --glass-bg-active: rgba(255, 255, 255, 0.95);
-            --glass-border: rgba(0, 0, 0, 0.10);
-            --glass-border-strong: rgba(0, 0, 0, 0.20);
-            --text-primary: rgba(0, 0, 0, 0.95);
-            --text-secondary: rgba(0, 0, 0, 0.65);
-            --text-tertiary: rgba(0, 0, 0, 0.45);
-            --bg-primary: #f5f5f7;
-            --bg-secondary: #e8e8ed;
-            --bg-tertiary: #d2d2d7;
-            --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-            --shadow-button: 0 4px 16px rgba(0, 122, 255, 0.25);
-            --overlay-bg: rgba(255, 255, 255, 0.5);
-        }
-
-        /* ===== Base Styles ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-            transition: background-color 0.3s ease, color 0.3s ease;
+            background: var(--bg-deep);
+            color: rgba(255,255,255,0.92);
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
         }
 
-        /* ===== Glass Effect ===== */
-        .glass {
-            background: var(--glass-bg);
-            backdrop-filter: blur(40px) saturate(180%);
-            -webkit-backdrop-filter: blur(40px) saturate(180%);
-            border: 1px solid var(--glass-border);
-            border-radius: 18px;
-            box-shadow: var(--shadow-glass);
-            transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
-        }
-        .glass-hover:hover {
-            background: var(--glass-bg-hover);
-            border-color: var(--glass-border-strong);
-            transform: translateY(-2px);
-        }
-        .glass-button {
-            background: var(--glass-bg);
-            backdrop-filter: blur(40px);
-            -webkit-backdrop-filter: blur(40px);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
-            color: var(--text-primary);
-        }
-        .glass-button:hover {
-            background: var(--glass-bg-hover);
-            border-color: var(--glass-border-strong);
-            box-shadow: var(--shadow-button);
-            transform: translateY(-1px);
-        }
-        .glass-button:active {
-            background: var(--glass-bg-active);
-            transform: scale(0.98);
-        }
-
-        /* ===== Primary Button ===== */
-        .btn-primary {
-            background: linear-gradient(135deg, #007AFF 0%, #BF5AF2 50%, #FF375F 100%);
-            border: none;
-            border-radius: 12px;
-            color: white;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 16px rgba(0, 122, 255, 0.3);
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(0, 122, 255, 0.4);
-            filter: brightness(1.05);
-        }
-        .btn-primary:active {
-            transform: scale(0.98);
-        }
-
-        /* ===== Inputs ===== */
-        .glass-input {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            color: var(--text-primary);
-            transition: all 0.2s ease;
-            width: 100%;
-            padding: 0.75rem 1rem;
-        }
-        .glass-input::placeholder {
-            color: var(--text-tertiary);
-        }
-        .glass-input:focus {
-            outline: none;
-            border-color: var(--accent-blue);
-            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
-        }
-
-        /* ===== Select ===== */
-        .glass-select {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            color: var(--text-primary);
-            cursor: pointer;
-            transition: all 0.2s ease;
-            width: 100%;
-            padding: 0.75rem 1rem;
-        }
-        .glass-select:focus {
-            outline: none;
-            border-color: var(--accent-blue);
-            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
-        }
-        .glass-select option {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-        }
-
-        /* ===== Scrollbar ===== */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--glass-border-strong); }
-
-        /* ===== Text Colors ===== */
-        .text-primary { color: var(--text-primary); }
-        .text-secondary { color: var(--text-secondary); }
-        .text-tertiary { color: var(--text-tertiary); }
-
-        /* ===== Background Colors ===== */
-        .bg-primary { background-color: var(--bg-primary); }
-        .bg-secondary { background-color: var(--bg-secondary); }
-        .bg-tertiary { background-color: var(--bg-tertiary); }
-
-        /* ===== Accent Gradient Text ===== */
-        .text-gradient {
-            background: linear-gradient(135deg, #007AFF 0%, #BF5AF2 50%, #FF375F 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        /* ===== Animations ===== */
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
-        .animate-spin { animation: spin 1s linear infinite; }
-        .animate-pulse { animation: pulse 2s ease-in-out infinite; }
-        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-
-        /* ===== Aurora Background Orbs ===== */
-        .aurora-orb {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0.8;
-            animation: auroraFloat 20s ease-in-out infinite;
-        }
-        .aurora-orb:nth-child(2) { animation-delay: -7s; }
-        .aurora-orb:nth-child(3) { animation-delay: -14s; }
-        @keyframes auroraFloat {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            25% { transform: translate(2%, 3%) scale(1.02); }
-            50% { transform: translate(-1%, 5%) scale(0.98); }
-            75% { transform: translate(3%, -2%) scale(1.01); }
-        }
-
-        /* ===== Aurora Color Fallbacks (for app-frontend.js) ===== */
-        .bg-aurora-purple { background-color: #8B5CF6; }
-        .bg-aurora-pink { background-color: #EC4899; }
-        .bg-aurora-cyan { background-color: #06B6D4; }
-        .bg-aurora-blue { background-color: #3B82F6; }
-        .text-aurora-purple { color: #8B5CF6; }
-        .text-aurora-pink { color: #EC4899; }
-        .text-aurora-cyan { color: #06B6D4; }
-        .text-aurora-blue { color: #3B82F6; }
-        .border-aurora-purple { border-color: #8B5CF6; }
-        .border-aurora-pink { border-color: #EC4899; }
-        .border-aurora-cyan { border-color: #06B6D4; }
-        .border-aurora-blue { border-color: #3B82F6; }
-
-        /* ===== Responsive Sidebar ===== */
-        @media (max-width: 1024px) {
-            aside { transform: translateX(-100%); transition: transform 0.3s ease; position: fixed; z-index: 50; }
-            aside.open { transform: translateX(0); }
-            main { margin-left: 0 !important; }
-        }
-
-        /* ===== Nav Button ===== */
-        .nav-btn {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            width: 100%;
-            padding: 0.875rem 1rem;
-            border-radius: 14px;
-            color: var(--text-secondary);
-            transition: all 0.2s ease;
-            cursor: pointer;
-            border: 1px solid transparent;
-        }
-        .nav-btn:hover {
-            background: var(--glass-bg-hover);
-            color: var(--text-primary);
-        }
-        .nav-btn.active {
-            background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(191, 90, 242, 0.15));
-            border-color: rgba(0, 122, 255, 0.3);
-            color: var(--text-primary);
-        }
-        .nav-btn i { width: 20px; height: 20px; }
-
-        /* ===== Glass Card (for app-frontend.js) ===== */
-        .glass-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(40px) saturate(180%);
-            -webkit-backdrop-filter: blur(40px) saturate(180%);
-            border: 1px solid var(--glass-border);
-            border-radius: 18px;
-            box-shadow: var(--shadow-glass);
-            transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+        /* ===== Fluid Background ===== */
+        .fluid-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
             overflow: hidden;
         }
-        .glass-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            border-color: var(--glass-border-strong);
-        }
-
-        /* ===== Card Hover Effect ===== */
-        .card-hover {
-            transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
-        }
-        .card-hover:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
-        }
-
-        /* ===== Hidden State ===== */
-        .card-hidden .card-image { filter: blur(20px) brightness(0.5); }
-        .card-hidden .card-hidden-badge { display: flex; }
-
-        /* ===== Action Button (in cards) ===== */
-        .action-btn {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 10px;
-            transition: all 0.2s ease;
-        }
-        .action-btn:hover {
-            background: var(--glass-bg-hover);
-            border-color: var(--glass-border-strong);
-        }
-
-        /* ===== Toast Notification ===== */
-        .toast {
-            background: var(--glass-bg);
-            backdrop-filter: blur(40px);
-            -webkit-backdrop-filter: blur(40px);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            box-shadow: var(--shadow-glass);
-            color: var(--text-primary);
-        }
-
-        /* ===== Spinner ===== */
-        .spinner {
-            border: 3px solid rgba(0, 122, 255, 0.15);
-            border-top-color: var(--accent-blue);
+        .orb {
+            position: absolute;
             border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.5;
+            will-change: transform;
+        }
+        .orb-1 {
+            width: 70vw; height: 70vw;
+            top: -25%; left: -20%;
+            background: radial-gradient(circle, rgba(10,132,255,0.55), transparent 65%);
+            animation: drift1 28s ease-in-out infinite alternate;
+        }
+        .orb-2 {
+            width: 65vw; height: 65vw;
+            bottom: -30%; right: -15%;
+            background: radial-gradient(circle, rgba(191,90,242,0.45), transparent 65%);
+            animation: drift2 32s ease-in-out infinite alternate;
+        }
+        .orb-3 {
+            width: 55vw; height: 55vw;
+            top: 45%; left: 35%;
+            background: radial-gradient(circle, rgba(255,55,95,0.3), transparent 60%);
+            animation: drift3 24s ease-in-out infinite alternate;
+        }
+        @keyframes drift1 {
+            0% { transform: translate(0,0) scale(1); }
+            100% { transform: translate(10%,14%) scale(1.1); }
+        }
+        @keyframes drift2 {
+            0% { transform: translate(0,0) scale(1); }
+            100% { transform: translate(-12%,-10%) scale(1.06); }
+        }
+        @keyframes drift3 {
+            0% { transform: translate(0,0) scale(1); }
+            100% { transform: translate(8%,-12%) scale(0.94); }
+        }
+
+        /* Noise grain overlay */
+        .grain {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            opacity: 0.025;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+
+        /* ===== Liquid Glass Base ===== */
+        .liquid-glass {
+            background: rgba(255, 255, 255, 0.045);
+            backdrop-filter: blur(48px) saturate(200%);
+            -webkit-backdrop-filter: blur(48px) saturate(200%);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            box-shadow:
+                inset 0 1px 1px rgba(255, 255, 255, 0.08),
+                0 20px 48px rgba(0, 0, 0, 0.4);
+            border-radius: 24px;
+        }
+        .liquid-glass-strong {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(64px) saturate(220%);
+            -webkit-backdrop-filter: blur(64px) saturate(220%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow:
+                inset 0 1px 1px rgba(255, 255, 255, 0.1),
+                0 24px 64px rgba(0, 0, 0, 0.5);
+            border-radius: 24px;
+        }
+
+        /* ===== Segmented Control ===== */
+        .segmented {
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 999px;
+            padding: 4px;
+            display: flex;
+            position: relative;
+        }
+        .segmented-btn {
+            padding: 7px 18px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.45);
+            transition: color 0.25s ease;
+            position: relative;
+            z-index: 1;
+            cursor: pointer;
+            border: none;
+            background: none;
+            white-space: nowrap;
+        }
+        .segmented-btn:hover { color: rgba(255,255,255,0.75); }
+        .segmented-btn.active {
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        .segmented-indicator {
+            position: absolute;
+            top: 4px; bottom: 4px;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 999px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 0;
+            transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), width 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        /* ===== Inputs & Selects ===== */
+        .glass-input {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 14px;
+            color: rgba(255,255,255,0.92);
+            font-size: 13px;
+            transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+            width: 100%;
+            padding: 10px 14px;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        .glass-input::placeholder { color: rgba(255,255,255,0.25); }
+        .glass-input:focus {
+            outline: none;
+            border-color: rgba(10, 132, 255, 0.4);
+            background: rgba(0, 0, 0, 0.4);
+            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.08);
+        }
+        select.glass-input {
+            background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 36px;
+        }
+        select.glass-input option {
+            background: #1a1a1a;
+            color: rgba(255,255,255,0.9);
+        }
+
+        /* ===== Aspect Ratio Buttons ===== */
+        .ratio-btn {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 12px 8px;
+            transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+            cursor: pointer;
+            color: rgba(255,255,255,0.4);
+        }
+        .ratio-btn:hover {
+            background: rgba(255,255,255,0.07);
+            border-color: rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.7);
+        }
+        .ratio-btn.active {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(10, 132, 255, 0.35);
+            color: rgba(255,255,255,0.95);
+            box-shadow: 0 0 16px rgba(10,132,255,0.1);
+        }
+
+        /* ===== Generate Button ===== */
+        .btn-generate {
+            background: linear-gradient(135deg, #0A84FF 0%, #BF5AF2 50%, #FF375F 100%);
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+            box-shadow: 0 8px 24px rgba(10, 132, 255, 0.25);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-generate::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent 50%);
+            opacity: 0.4;
+        }
+        .btn-generate:hover {
+            transform: translateY(-1px) scale(1.01);
+            box-shadow: 0 12px 32px rgba(10, 132, 255, 0.35);
+        }
+        .btn-generate:active { transform: scale(0.98); }
+
+        /* ===== Prompt Textarea ===== */
+        .prompt-area {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: rgba(255,255,255,0.95);
+            font-size: 15px;
+            resize: none;
+            width: 100%;
+            min-height: 24px;
+            max-height: 120px;
+            line-height: 1.5;
+        }
+        .prompt-area::placeholder { color: rgba(255,255,255,0.3); }
+
+        /* ===== Scrollbar ===== */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+        /* ===== Animations ===== */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in {
+            animation: fadeIn 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+        }
+        .delay-1 { animation-delay: 0.05s; opacity: 0; }
+        .delay-2 { animation-delay: 0.1s; opacity: 0; }
+        .delay-3 { animation-delay: 0.15s; opacity: 0; }
+        .delay-4 { animation-delay: 0.2s; opacity: 0; }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 1024px) {
+            .inspector { display: none; }
+            .canvas-area { padding-right: 0 !important; }
         }
     </style>
 </head>
-<body class="font-sans min-h-screen overflow-x-hidden">
-    <!-- Aurora Background -->
-    <div class="fixed inset-0 -z-10 overflow-hidden">
-        <!-- Animated gradient orbs -->
-        <div class="aurora-orb" style="top: -20%; left: -10%; width: 60vw; height: 60vw; background: radial-gradient(circle, rgba(0,122,255,0.25) 0%, transparent 70%);"></div>
-        <div class="aurora-orb" style="bottom: -20%; right: -10%; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(191,90,242,0.20) 0%, transparent 70%);"></div>
-        <div class="aurora-orb" style="top: 40%; left: 30%; width: 40vw; height: 40vw; background: radial-gradient(circle, rgba(255,55,95,0.15) 0%, transparent 70%);"></div>
-        <!-- Subtle grain overlay -->
-        <div class="absolute inset-0" style="opacity: 0.03; background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 256 256%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E');"></div>
+<body class="flex flex-col">
+
+    <!-- Fluid Background -->
+    <div class="fluid-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
     </div>
+    <div class="grain"></div>
 
-    <div class="flex min-h-screen">
-        <!-- Sidebar -->
-        <aside class="glass w-72 flex flex-col fixed h-full z-40" style="border-radius: 0 24px 24px 0; border-left: none; border-top: none; border-right: none; border-bottom: none;">
-            <div class="p-6 border-b" style="border-color: var(--glass-border);">
-                <div class="flex items-center gap-3">
-                    <div class="w-11 h-11 rounded-xl flex items-center justify-center" style="background: linear-gradient(135deg, #007AFF 0%, #BF5AF2 100%);">
-                        <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 1 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 1 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 1 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 1 1-.963 0z"/></svg>
-                    </div>
-                    <div>
-                        <h1 class="font-serif text-xl font-semibold" style="color: var(--text-primary);">AI Studio</h1>
-                        <p class="text-xs" style="color: var(--text-tertiary);">Creative Studio</p>
-                    </div>
-                </div>
+    <!-- Floating Top Navigation -->
+    <nav class="fixed top-5 left-1/2 -translate-x-1/2 z-50 liquid-glass flex items-center justify-between px-2 py-2 w-[calc(100%-32px)] max-w-4xl">
+        <!-- Logo -->
+        <div class="flex items-center gap-2.5 pl-3 pr-4">
+            <div class="w-8 h-8 rounded-xl flex items-center justify-center"
+                 style="background: linear-gradient(135deg, #0A84FF, #BF5AF2);
+                        box-shadow: 0 4px 16px rgba(10,132,255,0.25);">
+                <i data-lucide="sparkles" class="w-4 h-4 text-white"></i>
             </div>
-            <nav class="flex-1 p-4 space-y-1">
-                <button class="nav-btn active" data-tab="create">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8L19 13"/><path d="M15 9h.01"/><path d="M17.8 6.2L19 5"/><path d="m3 21 9-9"/><path d="M12.2 6.2L11 5"/></svg>
-                    <span class="font-medium">Create</span>
-                </button>
-                <button class="nav-btn" data-tab="gallery">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-                    <span class="font-medium">Gallery</span>
-                </button>
-                <button class="nav-btn" data-tab="collection">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                    <span class="font-medium">Collection</span>
-                </button>
-                <button class="nav-btn" data-tab="video">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>
-                    <span class="font-medium">Video</span>
-                </button>
-            </nav>
-            <div class="p-4 border-t" style="border-color: var(--glass-border);">
-                <!-- Theme Toggle -->
-                <button id="theme-toggle" class="glass-button w-full flex items-center justify-between px-4 py-3 mb-3 cursor-pointer">
-                    <span class="flex items-center gap-2" id="theme-icon-container">
-                        <svg class="w-4 h-4" id="theme-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-                        <span class="text-sm font-medium">Theme</span>
-                    </span>
-                    <svg class="w-4 h-4" id="theme-icon-svg2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-                </button>
-                <div class="glass p-4 rounded-xl">
-                    <p class="text-xs" style="color: var(--text-tertiary);">Powered by</p>
-                    <p class="text-sm font-semibold" style="color: var(--text-primary);">Multi-API</p>
-                </div>
-            </div>
-        </aside>
+            <span class="font-semibold text-[15px] tracking-tight hidden sm:block" style="color: rgba(255,255,255,0.9);">AI Studio</span>
+        </div>
 
-        <!-- Main Content -->
-        <main class="flex-1 ml-72">
-            <!-- Mobile Header -->
-            <div class="lg:hidden p-4 border-b flex items-center justify-between sticky top-0 z-30 glass" style="border-color: var(--glass-border);">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #007AFF 0%, #BF5AF2 100%);">
-                        <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 1 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 1 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 1 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 1 1-.963 0z"/></svg>
-                    </div>
-                    <h1 class="font-serif font-semibold text-lg" style="color: var(--text-primary);">AI Studio</h1>
-                </div>
-                <button id="mobile-menu-btn" class="glass-button p-2 cursor-pointer">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
-                </button>
-            </div>
+        <!-- Segmented Control -->
+        <div class="segmented" id="navSegmented">
+            <div class="segmented-indicator" id="navIndicator"></div>
+            <button class="segmented-btn active" data-tab="create">Create</button>
+            <button class="segmented-btn" data-tab="gallery">Gallery</button>
+            <button class="segmented-btn" data-tab="collection">Collection</button>
+            <button class="segmented-btn" data-tab="video">Video</button>
+        </div>
 
-            <!-- Create View -->
-            <div id="create-view" class="view p-8">
-                <div class="max-w-6xl mx-auto">
-                    <div class="mb-8">
-                        <h2 class="font-serif text-4xl font-semibold mb-2 text-gradient">Create Magic</h2>
-                        <p class="text-secondary">Transform your imagination into stunning visuals</p>
-                    </div>
-                    <div class="grid grid-cols-12 gap-6">
-                        <!-- Left Panel -->
-                        <div class="col-span-12 lg:col-span-5 space-y-6">
-                            <!-- Config Card -->
-                            <div class="glass p-6">
-                                <h3 class="text-lg font-medium mb-6 flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full" style="background: var(--accent-blue);"></span>
-                                    <span style="color: var(--text-primary);">Configuration</span>
-                                </h3>
-                                <!-- Provider -->
-                                <div class="space-y-2 mb-5">
-                                    <label class="text-sm font-medium text-secondary">Provider</label>
-                                    <select id="provider" class="glass-select"></select>
-                                </div>
-                                <!-- Model -->
-                                <div class="space-y-2 mb-5">
-                                    <label class="text-sm font-medium text-secondary">Model</label>
-                                    <select id="model" class="glass-select"></select>
-                                </div>
-                                <!-- Size -->
-                                <div id="control-size" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm font-medium text-secondary">Size</label>
-                                    <select id="size" class="glass-select">
-                                        <option value="">Auto</option>
-                                        <option value="1024x1024">1024×1024</option>
-                                        <option value="1024x1792">1024×1792</option>
-                                        <option value="1792x1024">1792×1024</option>
-                                    </select>
-                                </div>
-                                <!-- Quality -->
-                                <div id="control-quality" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm font-medium text-secondary">Quality</label>
-                                    <select id="quality" class="glass-select">
-                                        <option value="">Auto</option>
-                                        <option value="standard">Standard</option>
-                                        <option value="hd">HD</option>
-                                        <option value="high">High</option>
-                                        <option value="medium">Medium</option>
-                                        <option value="low">Low</option>
-                                    </select>
-                                </div>
-                                <!-- Style -->
-                                <div id="control-style" class="space-y-2 mb-5 hidden">
-                                    <label class="text-sm font-medium text-secondary">Style</label>
-                                    <select id="style" class="glass-select">
-                                        <option value="">Auto</option>
-                                        <option value="vivid">Vivid</option>
-                                        <option value="natural">Natural</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <!-- Prompt Card -->
-                            <div class="glass p-6">
-                                <h3 class="text-lg font-medium mb-4 flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full" style="background: var(--accent-pink);"></span>
-                                    <span style="color: var(--text-primary);">Prompt</span>
-                                </h3>
-                                <textarea id="prompt" rows="5" placeholder="Describe your vision in detail..." class="glass-input resize-none"></textarea>
-                                <button id="generateBtn" class="btn-primary w-full mt-4 h-14 flex items-center justify-center gap-2">
-                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 1 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 1 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 1 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 1 1-.963 0z"/></svg>
-                                    Generate
-                                </button>
-                            </div>
-                        </div>
-                        <!-- Right Panel - Preview -->
-                        <div class="col-span-12 lg:col-span-7">
-                            <div id="preview-area" class="glass min-h-[500px] flex items-center justify-center overflow-hidden">
-                                <div id="empty-state" class="text-center p-12 animate-fade-in">
-                                    <div class="w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center" style="background: linear-gradient(135deg, rgba(0,122,255,0.1), rgba(191,90,242,0.1));">
-                                        <svg class="w-12 h-12" style="color: var(--accent-blue); opacity: 0.6;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><line x1="12" x2="12" y1="7" y2="13"/><line x1="9" x2="15" y1="10" y2="10"/></svg>
-                                    </div>
-                                    <h3 class="font-serif text-2xl font-medium mb-2" style="color: var(--text-primary);">Your Canvas Awaits</h3>
-                                    <p class="text-secondary max-w-sm mx-auto">Configure your settings and describe your vision to bring your imagination to life.</p>
-                                </div>
-                                <div id="loading" class="hidden text-center p-12">
-                                    <div class="w-16 h-16 mx-auto mb-6 rounded-full border-4 animate-spin" style="border-color: rgba(0,122,255,0.2); border-top-color: var(--accent-blue);"></div>
-                                    <p class="text-secondary">Creating your masterpiece...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Gallery View -->
-            <div id="gallery-view" class="view hidden p-8">
-                <div class="max-w-7xl mx-auto">
-                    <div class="mb-8">
-                        <h2 class="font-serif text-4xl font-semibold mb-2 text-gradient">Gallery</h2>
-                        <p class="text-secondary">Your generated masterpieces</p>
-                    </div>
-                    <div id="gallery-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
-                </div>
-            </div>
-
-            <!-- Collection View -->
-            <div id="collection-view" class="view hidden p-8">
-                <div class="max-w-7xl mx-auto">
-                    <div class="flex flex-col lg:flex-row gap-8">
-                        <div class="lg:w-80 shrink-0">
-                            <div class="glass p-6 sticky top-8">
-                                <h3 class="text-lg font-medium mb-6" style="color: var(--text-primary);">Add to Collection</h3>
-                                <div class="space-y-4">
-                                    <div>
-                                        <label class="text-sm font-medium text-secondary block mb-2">Image URL</label>
-                                        <input type="text" id="manual-url" placeholder="https://..." class="glass-input">
-                                    </div>
-                                    <div>
-                                        <label class="text-sm font-medium text-secondary block mb-2">Prompt</label>
-                                        <textarea id="manual-prompt" rows="3" placeholder="Describe..." class="glass-input resize-none"></textarea>
-                                    </div>
-                                    <div>
-                                        <label class="text-sm font-medium text-secondary block mb-2">Model</label>
-                                        <input type="text" id="manual-model" placeholder="Optional" class="glass-input">
-                                    </div>
-                                    <div>
-                                        <label class="text-sm font-medium text-secondary block mb-2">Aspect</label>
-                                        <select id="manual-aspect" class="glass-select">
-                                            <option value="">Select...</option>
-                                            <option value="1:1">1:1</option>
-                                            <option value="16:9">16:9</option>
-                                            <option value="9:16">9:16</option>
-                                        </select>
-                                    </div>
-                                    <button id="addManualBtn" class="btn-primary w-full h-12">Add Image</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex-1">
-                            <div class="mb-6">
-                                <h2 class="font-serif text-4xl font-semibold mb-2 text-gradient">Collection</h2>
-                                <p class="text-secondary">Manually curated images</p>
-                            </div>
-                            <div id="collection-gallery" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Video View -->
-            <div id="video-view" class="view hidden p-8">
-                <div class="max-w-7xl mx-auto">
-                    <div class="flex flex-col lg:flex-row gap-8">
-                        <div class="lg:w-80 shrink-0">
-                            <div class="glass p-6 sticky top-8">
-                                <h3 class="text-lg font-medium mb-6" style="color: var(--text-primary);">Add Video</h3>
-                                <div class="space-y-4">
-                                    <div>
-                                        <label class="text-sm font-medium text-secondary block mb-2">Type</label>
-                                        <select id="video-type" class="glass-select">
-                                            <option value="text-to-video">Text to Video</option>
-                                            <option value="image-to-video">Image to Video</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="text-sm font-medium text-secondary block mb-2">Video URL</label>
-                                        <input type="text" id="video-url" placeholder="https://..." class="glass-input">
-                                    </div>
-                                    <div id="video-source-image-group" class="hidden">
-                                        <label class="text-sm font-medium text-secondary block mb-2">Source Image</label>
-                                        <input type="text" id="video-source-image" placeholder="https://..." class="glass-input">
-                                    </div>
-                                    <div>
-                                        <label class="text-sm font-medium text-secondary block mb-2">Prompt</label>
-                                        <textarea id="video-prompt" rows="3" placeholder="Describe..." class="glass-input resize-none"></textarea>
-                                    </div>
-                                    <div>
-                                        <label class="text-sm font-medium text-secondary block mb-2">Model</label>
-                                        <input type="text" id="video-model" placeholder="Runway, Pika..." class="glass-input">
-                                    </div>
-                                    <div>
-                                        <label class="text-sm font-medium text-secondary block mb-2">Aspect</label>
-                                        <select id="video-aspect" class="glass-select">
-                                            <option value="">Select...</option>
-                                            <option value="16:9">16:9</option>
-                                            <option value="9:16">9:16</option>
-                                            <option value="1:1">1:1</option>
-                                        </select>
-                                    </div>
-                                    <button id="addVideoBtn" class="btn-primary w-full h-12">Add Video</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex-1">
-                            <div class="mb-6">
-                                <h2 class="font-serif text-4xl font-semibold mb-2 text-gradient">Videos</h2>
-                                <p class="text-secondary">Your video collection</p>
-                            </div>
-                            <div id="video-gallery" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- Lightbox Modal -->
-    <div id="lightbox" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 backdrop-blur-xl" style="background: var(--overlay-bg);" id="lightbox-overlay"></div>
-        <div class="relative z-10 flex items-start justify-center w-full h-full overflow-y-auto py-8 px-4">
-            <div class="glass max-w-3xl w-full animate-fade-in" style="border-radius: 24px;">
-                <div class="relative">
-                    <button id="lightbox-close" class="glass-button absolute top-4 right-4 z-20 w-10 h-10 flex items-center justify-center cursor-pointer">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                    </button>
-                    <div id="lightbox-media" class="flex items-center justify-center rounded-t-2xl min-h-[300px]" style="background: var(--bg-primary);"></div>
-                </div>
-                <div class="p-6 space-y-4">
-                    <div id="lightbox-tags" class="flex flex-wrap gap-2"></div>
-                    <div>
-                        <label class="text-xs font-medium uppercase tracking-wider text-tertiary">Prompt</label>
-                        <p id="lightbox-prompt" class="text-sm mt-1 whitespace-pre-wrap" style="color: var(--text-secondary);"></p>
-                    </div>
-                    <div class="flex gap-2 pt-2">
-                        <button id="lightbox-copy" class="glass-button flex-1 h-10 text-sm cursor-pointer">
-                            <svg class="w-4 h-4 inline mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy Prompt
-                        </button>
-                        <a id="lightbox-open" href="#" target="_blank" class="glass-button flex-1 h-10 text-sm flex items-center justify-center transition-colors">
-                            <svg class="w-4 h-4 inline mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>Open Original
-                        </a>
-                    </div>
+        <!-- Right Actions -->
+        <div class="flex items-center gap-2 pl-4">
+            <button class="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:bg-white/10"
+                    style="border: 1px solid rgba(255,255,255,0.06);">
+                <i data-lucide="moon" class="w-3.5 h-3.5" style="color: rgba(255,255,255,0.5);"></i>
+            </button>
+            <div class="w-8 h-8 rounded-full overflow-hidden"
+                 style="border: 1px solid rgba(255,255,255,0.1);">
+                <div class="w-full h-full flex items-center justify-center" style="background: rgba(255,255,255,0.08);">
+                    <i data-lucide="user" class="w-3.5 h-3.5" style="color: rgba(255,255,255,0.4);"></i>
                 </div>
             </div>
         </div>
-    </div>
+    </nav>
+
+    <!-- Main Layout -->
+    <main class="flex-1 flex relative z-10 pt-[84px] pb-6 px-6 h-[calc(100vh-0px)]">
+
+        <!-- Center Canvas Area -->
+        <div class="flex-1 flex flex-col relative canvas-area pr-6">
+
+            <!-- Canvas Preview -->
+            <div class="flex-1 liquid-glass-strong rounded-[28px] flex items-center justify-center relative overflow-hidden mb-0 transition-all duration-500">
+
+                <!-- Empty State -->
+                <div class="text-center flex flex-col items-center justify-center pointer-events-none select-none" id="emptyState">
+                    <div class="w-[72px] h-[72px] rounded-2xl flex items-center justify-center mb-5"
+                         style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);">
+                        <i data-lucide="image" class="w-8 h-8" style="color: rgba(255,255,255,0.15);"></i>
+                    </div>
+                    <p class="text-base font-medium mb-1" style="color: rgba(255,255,255,0.5);">The canvas is ready</p>
+                    <p class="text-xs" style="color: rgba(255,255,255,0.25);">Describe what you want to create below</p>
+                </div>
+
+                <!-- Loading State (hidden) -->
+                <div class="hidden text-center" id="loadingState">
+                    <div class="w-12 h-12 rounded-full border-2 mx-auto mb-4 animate-spin"
+                         style="border-color: rgba(10,132,255,0.12); border-top-color: #0A84FF;"></div>
+                    <p class="text-sm" style="color: rgba(255,255,255,0.4);">Creating your masterpiece...</p>
+                </div>
+            </div>
+
+            <!-- Floating Prompt Bar (Spotlight Style) -->
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-2xl z-40">
+                <div class="liquid-glass-strong p-2 flex items-end gap-2">
+                    <button class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all hover:bg-white/10 cursor-pointer"
+                            style="border: 1px solid rgba(255,255,255,0.06);">
+                        <i data-lucide="paperclip" class="w-4 h-4" style="color: rgba(255,255,255,0.45);"></i>
+                    </button>
+                    <textarea class="prompt-area py-2.5 px-1" rows="1" id="promptInput" placeholder="Describe your vision in detail..."></textarea>
+                    <button class="btn-generate h-11 px-5 flex items-center gap-1.5 shrink-0" id="generateBtn">
+                        <i data-lucide="arrow-up" class="w-4 h-4 relative z-10"></i>
+                        <span class="relative z-10">Generate</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Inspector Panel -->
+        <aside class="w-[300px] shrink-0 flex flex-col gap-4 inspector">
+
+            <!-- Settings Panel -->
+            <div class="liquid-glass flex-1 p-5 overflow-y-auto flex flex-col gap-5 animate-in delay-1">
+
+                <!-- Section: Provider -->
+                <div class="space-y-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-1.5 h-1.5 rounded-full" style="background: #0A84FF;"></div>
+                        <h3 class="text-[13px] font-semibold" style="color: rgba(255,255,255,0.7);">Configuration</h3>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-medium ml-1" style="color: rgba(255,255,255,0.3);">Provider</label>
+                        <select class="glass-input" id="providerSelect"></select>
+                    </div>
+
+                    <!-- Mode Segmented -->
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-medium ml-1" style="color: rgba(255,255,255,0.3);">Mode</label>
+                        <div class="segmented" id="modeSegmented">
+                            <div class="segmented-indicator" id="modeIndicator"></div>
+                            <button class="segmented-btn active" data-mode="image">Image</button>
+                            <button class="segmented-btn" data-mode="edit">Edit</button>
+                            <button class="segmented-btn" data-mode="video">Video</button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-medium ml-1" style="color: rgba(255,255,255,0.3);">Model</label>
+                        <select class="glass-input" id="modelSelect"></select>
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <div class="h-px" style="background: rgba(255,255,255,0.06);"></div>
+
+                <!-- Section: Parameters -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-1.5 h-1.5 rounded-full" style="background: #BF5AF2;"></div>
+                        <h3 class="text-[13px] font-semibold" style="color: rgba(255,255,255,0.7);">Parameters</h3>
+                    </div>
+
+                    <!-- Aspect Ratio -->
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-medium ml-1" style="color: rgba(255,255,255,0.3);">Aspect Ratio</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button class="ratio-btn active flex flex-col items-center gap-1.5">
+                                <div class="w-4 h-4 rounded-sm" style="border: 1.5px solid currentColor;"></div>
+                                <span class="text-[10px] font-medium">1:1</span>
+                            </button>
+                            <button class="ratio-btn flex flex-col items-center gap-1.5">
+                                <div class="w-5 h-3 rounded-sm" style="border: 1.5px solid currentColor;"></div>
+                                <span class="text-[10px] font-medium">16:9</span>
+                            </button>
+                            <button class="ratio-btn flex flex-col items-center gap-1.5">
+                                <div class="w-3 h-5 rounded-sm" style="border: 1.5px solid currentColor;"></div>
+                                <span class="text-[10px] font-medium">9:16</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Image Count -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center ml-1">
+                            <label class="text-[11px] font-medium" style="color: rgba(255,255,255,0.3);">Number of Images</label>
+                            <span class="text-[11px] font-medium tabular-nums" style="color: rgba(255,255,255,0.6);" id="countValue">1</span>
+                        </div>
+                        <input type="range" min="1" max="4" value="1" id="countInput" class="w-full h-1 rounded-full appearance-none cursor-pointer"
+                               style="background: rgba(255,255,255,0.08); accent-color: #0A84FF;"
+                               oninput="document.getElementById('countValue').textContent = this.value">
+                    </div>
+
+                    <!-- Duration (for video) -->
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-medium ml-1" style="color: rgba(255,255,255,0.3);">Duration</label>
+                        <select class="glass-input">
+                            <option>6 seconds</option>
+                            <option>10 seconds</option>
+                            <option>15 seconds</option>
+                        </select>
+                    </div>
+
+                    <!-- Resolution -->
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-medium ml-1" style="color: rgba(255,255,255,0.3);">Resolution</label>
+                        <select class="glass-input">
+                            <option>720p</option>
+                            <option>480p</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info Card -->
+            <div class="liquid-glass p-4 animate-in delay-2">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: rgba(10,132,255,0.1); border: 1px solid rgba(10,132,255,0.15);">
+                        <i data-lucide="zap" class="w-4 h-4" style="color: #0A84FF;"></i>
+                    </div>
+                    <div>
+                        <p class="text-[12px] font-medium" style="color: rgba(255,255,255,0.7);">Multi-Provider AI</p>
+                        <p class="text-[11px]" style="color: rgba(255,255,255,0.3);" id="providerCount">0 providers connected</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
 
     <script>
-        // Theme toggle
-        const themeToggle = document.getElementById('theme-toggle');
-        const themeIconSvg = document.getElementById('theme-icon-svg');
-        const themeIconSvg2 = document.getElementById('theme-icon-svg2');
-        const html = document.documentElement;
+        lucide.createIcons();
 
-        const sunPath = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>';
-        const moonPath = '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>';
+        // ===== Segmented Control Logic =====
+        function initSegmented(containerId, indicatorId) {
+            const container = document.getElementById(containerId);
+            const indicator = document.getElementById(indicatorId);
+            const buttons = container.querySelectorAll('.segmented-btn');
 
-        function setTheme(theme) {
-            html.setAttribute('data-theme', theme);
-            localStorage.setItem('theme', theme);
-            if (theme === 'dark') {
-                themeIconSvg.innerHTML = moonPath;
-                themeIconSvg2.innerHTML = moonPath;
-            } else {
-                themeIconSvg.innerHTML = sunPath;
-                themeIconSvg2.innerHTML = sunPath;
+            function updateIndicator(btn) {
+                const rect = btn.getBoundingClientRect();
+                const parent = container.getBoundingClientRect();
+                indicator.style.width = rect.width + 'px';
+                indicator.style.transform = `translateX(${rect.left - parent.left}px)`;
             }
-        }
 
-        // Load saved theme
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        setTheme(savedTheme);
+            // Init with active button
+            const active = container.querySelector('.segmented-btn.active');
+            if (active) updateIndicator(active);
 
-        themeToggle.addEventListener('click', () => {
-            const currentTheme = html.getAttribute('data-theme');
-            setTheme(currentTheme === 'dark' ? 'light' : 'dark');
-        });
-
-        // Mobile menu toggle
-        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-        const sidebar = document.querySelector('aside');
-
-        if (mobileMenuBtn && sidebar) {
-            mobileMenuBtn.addEventListener('click', () => {
-                sidebar.classList.toggle('open');
-            });
-            document.querySelectorAll('.nav-btn').forEach(btn => {
+            buttons.forEach(btn => {
                 btn.addEventListener('click', () => {
-                    if (window.innerWidth <= 1024) {
-                        sidebar.classList.remove('open');
-                    }
+                    buttons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    updateIndicator(btn);
                 });
             });
+
+            // Recalculate on resize
+            window.addEventListener('resize', () => {
+                const a = container.querySelector('.segmented-btn.active');
+                if (a) updateIndicator(a);
+            });
         }
+
+        initSegmented('navSegmented', 'navIndicator');
+        initSegmented('modeSegmented', 'modeIndicator');
+
+        // ===== Aspect Ratio Buttons =====
+        document.querySelectorAll('.ratio-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.ratio-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // ===== API Wiring =====
+        const AR_TO_SIZE = { '1:1': '1024x1024', '16:9': '1792x1024', '9:16': '1024x1792' };
+
+        function getImageProxyUrl(url) {
+            if (!url) return '';
+            if (url.startsWith('/api/proxy/') || url.startsWith('data:')) return url;
+            return `/api/proxy/image?url=${encodeURIComponent(url)}`;
+        }
+        function escapeHtml(t) {
+            if (!t) return '';
+            const d = document.createElement('div'); d.textContent = t; return d.innerHTML;
+        }
+
+        let providersData = [];
+        const providerSelect = document.getElementById('providerSelect');
+        const modelSelect = document.getElementById('modelSelect');
+
+        function selectedProvider() {
+            return providersData.find(p => p.id === providerSelect.value);
+        }
+        function updateModels() {
+            const p = selectedProvider();
+            modelSelect.innerHTML = (p && p.models.length)
+                ? p.models.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('')
+                : '<option value="">—</option>';
+        }
+        async function loadProviders() {
+            try {
+                const res = await fetch('/api/providers');
+                if (res.status === 401) { location.href = '/login.html'; return; }
+                providersData = await res.json();
+                providerSelect.innerHTML = providersData.length
+                    ? providersData.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')
+                    : '<option value="">No providers configured</option>';
+                document.getElementById('providerCount').textContent =
+                    `${providersData.length} provider${providersData.length === 1 ? '' : 's'} connected`;
+                updateModels();
+            } catch (e) {
+                console.error('Failed to load providers', e);
+            }
+        }
+        providerSelect.addEventListener('change', updateModels);
+
+        // ===== Nav tabs: Create stays here; others go to the library page =====
+        document.querySelectorAll('#navSegmented .segmented-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+                if (tab === 'gallery') location.href = 'library.html?filter=all';
+                else if (tab === 'collection') location.href = 'library.html?filter=collection';
+                else if (tab === 'video') location.href = 'library.html?filter=video';
+            });
+        });
+
+        // ===== Generate =====
+        const generateBtn = document.getElementById('generateBtn');
+        const promptInput = document.getElementById('promptInput');
+        const emptyState = document.getElementById('emptyState');
+        const loadingState = document.getElementById('loadingState');
+        const canvas = loadingState.parentElement;
+
+        function activeAspect() {
+            const el = document.querySelector('.ratio-btn.active span');
+            return el ? el.textContent.trim() : '1:1';
+        }
+        function renderResult(data) {
+            canvas.querySelector('.result-media')?.remove();
+            const wrap = document.createElement('div');
+            wrap.className = 'result-media absolute inset-0 flex items-center justify-center p-6 animate-in';
+            wrap.innerHTML = `<img src="${getImageProxyUrl(data.url)}" alt="Generated" class="max-w-full max-h-full object-contain rounded-2xl" style="box-shadow: 0 24px 64px rgba(0,0,0,0.5);">`;
+            canvas.appendChild(wrap);
+        }
+
+        generateBtn.addEventListener('click', async () => {
+            const provider = providerSelect.value;
+            const model = modelSelect.value;
+            const prompt = promptInput.value.trim();
+            if (!provider) { alert('Please select a provider'); return; }
+            if (!model) { alert('Please select a model'); return; }
+            if (!prompt) { alert('Please enter a prompt'); return; }
+
+            generateBtn.disabled = true;
+            emptyState.classList.add('hidden');
+            canvas.querySelector('.result-media')?.remove();
+            loadingState.classList.remove('hidden');
+
+            try {
+                const payload = { provider, model, prompt };
+                const p = selectedProvider();
+                if (p && p.type === 'openai') {
+                    const size = AR_TO_SIZE[activeAspect()];
+                    if (size) payload.size = size;
+                }
+                const count = parseInt(document.getElementById('countInput').value, 10);
+                if (count > 1) payload.n = count;
+
+                const res = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) {
+                    if (res.status === 401) { location.href = '/login.html'; return; }
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error || `Request failed: ${res.status}`);
+                }
+                const data = await res.json();
+                renderResult(data.results ? data.results[0] : data);
+            } catch (e) {
+                alert('Error: ' + e.message);
+                emptyState.classList.remove('hidden');
+            } finally {
+                generateBtn.disabled = false;
+                loadingState.classList.add('hidden');
+            }
+        });
+
+        loadProviders();
     </script>
-    <script src="app-frontend.js"></script>
 </body>
 </html>
