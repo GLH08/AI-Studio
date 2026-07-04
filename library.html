@@ -376,6 +376,30 @@
         </div>
     </main>
 
+    <!-- Lightbox -->
+    <div id="lightbox" class="fixed inset-0 z-[100] items-center justify-center p-4" style="display:none; background: rgba(0,0,0,0.75); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);">
+        <div class="liquid-glass-strong w-full max-w-3xl relative animate-in" style="max-height:92vh; overflow-y:auto; border-radius:24px;">
+            <button id="lbClose" class="card-action absolute top-4 right-4 z-10" title="Close">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+            <div id="lbMedia" class="w-full flex items-center justify-center" style="background:#000; border-radius:24px 24px 0 0; min-height:200px;"></div>
+            <div class="p-6 space-y-4">
+                <div id="lbTags" class="flex flex-wrap gap-2"></div>
+                <p id="lbPrompt" class="text-[13px] leading-relaxed" style="color:rgba(255,255,255,0.8); white-space:pre-wrap;"></p>
+                <div class="flex gap-2 pt-1">
+                    <button id="lbCopy" class="filter-btn" style="width:auto; background:rgba(255,255,255,0.06);">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                        Copy Prompt
+                    </button>
+                    <a id="lbOpen" href="#" target="_blank" rel="noopener" class="filter-btn" style="width:auto; background:rgba(255,255,255,0.06);">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
+                        Open Original
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
 
         // ===== Segmented Control Logic =====
@@ -549,37 +573,80 @@
 
         // ===== Card action delegation =====
         grid.addEventListener('click', async (e) => {
-            const actionBtn = e.target.closest('[data-action]');
-            if (!actionBtn) return;
-            const card = actionBtn.closest('.asset-card');
+            const card = e.target.closest('.asset-card');
+            if (!card) return;
             const id = card.dataset.id;
             const kind = card.dataset.kind;
-            const action = actionBtn.dataset.action;
+            const actionBtn = e.target.closest('[data-action]');
 
-            if (action === 'copy') {
-                const p = card.querySelector('.asset-overlay p');
-                copyText(p ? p.textContent : '');
-            } else if (action === 'hide') {
-                const currentlyHidden = card.dataset.hidden === '1';
-                const base = kind === 'video' ? 'videos' : 'images';
-                const res = await fetch(`/api/${base}/${id}/${currentlyHidden ? 'unhide' : 'hide'}`, { method: 'PATCH' });
-                if (res.ok) {
-                    const arr = kind === 'video' ? videos : images;
-                    const it = arr.find(x => x.id === id);
-                    if (it) it.hidden = !currentlyHidden;
-                    render();
+            if (actionBtn) {
+                const action = actionBtn.dataset.action;
+                if (action === 'copy') {
+                    const p = card.querySelector('.asset-overlay p');
+                    copyText(p ? p.textContent : '');
+                } else if (action === 'hide') {
+                    const currentlyHidden = card.dataset.hidden === '1';
+                    const base = kind === 'video' ? 'videos' : 'images';
+                    const res = await fetch(`/api/${base}/${id}/${currentlyHidden ? 'unhide' : 'hide'}`, { method: 'PATCH' });
+                    if (res.ok) {
+                        const arr = kind === 'video' ? videos : images;
+                        const it = arr.find(x => x.id === id);
+                        if (it) it.hidden = !currentlyHidden;
+                        render();
+                    }
+                } else if (action === 'delete') {
+                    if (!confirm('Delete this item?')) return;
+                    const base = kind === 'video' ? 'videos' : 'images';
+                    const res = await fetch(`/api/${base}/${id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        if (kind === 'video') videos = videos.filter(v => v.id !== id);
+                        else images = images.filter(i => i.id !== id);
+                        render();
+                    }
                 }
-            } else if (action === 'delete') {
-                if (!confirm('Delete this item?')) return;
-                const base = kind === 'video' ? 'videos' : 'images';
-                const res = await fetch(`/api/${base}/${id}`, { method: 'DELETE' });
-                if (res.ok) {
-                    if (kind === 'video') videos = videos.filter(v => v.id !== id);
-                    else images = images.filter(i => i.id !== id);
-                    render();
-                }
+                return;
             }
+
+            // "Open original" link -> let it work normally
+            if (e.target.closest('a')) return;
+
+            // Otherwise: open the lightbox
+            const item = (kind === 'video' ? videos : images).find(x => x.id === id);
+            if (item) openLightbox(item, kind);
         });
+
+        // ===== Lightbox =====
+        const lightbox = document.getElementById('lightbox');
+        const lbMedia = document.getElementById('lbMedia');
+        const lbTags = document.getElementById('lbTags');
+        const lbPrompt = document.getElementById('lbPrompt');
+        const lbOpen = document.getElementById('lbOpen');
+        let lbCopyText = '';
+
+        function openLightbox(item, kind) {
+            const url = item.url;
+            lbMedia.innerHTML = kind === 'video'
+                ? `<video controls autoplay src="${escapeHtml(getVideoProxyUrl(url))}" style="max-width:100%; max-height:78vh; border-radius:24px 24px 0 0;"></video>`
+                : `<img src="${escapeHtml(getImageProxyUrl(url))}" alt="" style="max-width:100%; max-height:78vh; object-fit:contain;">`;
+            const date = item.timestamp ? new Date(item.timestamp).toLocaleString() : '';
+            lbTags.innerHTML =
+                `<span class="tag-pill" style="background:rgba(139,92,246,0.2);color:#A78BFA;border:1px solid rgba(139,92,246,0.15);">${escapeHtml(item.model || 'Unknown')}</span>` +
+                (item.provider ? `<span class="tag-pill" style="background:rgba(10,132,255,0.15);color:#60A5FA;border:1px solid rgba(10,132,255,0.12);">${escapeHtml(item.provider)}</span>` : '') +
+                (item.aspectRatio ? `<span class="tag-pill" style="background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.06);">${escapeHtml(item.aspectRatio)}</span>` : '') +
+                (date ? `<span class="tag-pill" style="background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);border:1px solid rgba(255,255,255,0.06);">${escapeHtml(date)}</span>` : '');
+            lbPrompt.textContent = item.prompt || '(no prompt)';
+            lbOpen.href = url;
+            lbCopyText = item.prompt || '';
+            lightbox.style.display = 'flex';
+        }
+        function closeLightbox() {
+            lightbox.style.display = 'none';
+            lbMedia.innerHTML = ''; // stop video playback
+        }
+        lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+        document.getElementById('lbClose').addEventListener('click', closeLightbox);
+        document.getElementById('lbCopy').addEventListener('click', () => copyText(lbCopyText));
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
 
         // ===== Nav tabs: Create -> index; others set the filter here =====
         document.querySelectorAll('#navSegmented .segmented-btn').forEach(btn => {

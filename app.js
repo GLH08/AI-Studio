@@ -286,6 +286,7 @@ async function callOpenAI(provider, params) {
     if (params.response_format) body.response_format = params.response_format;
 
     console.log(`[OpenAI] Calling ${url} with model ${params.model}`);
+    console.log('[OpenAI] Request body:', JSON.stringify(body));
 
     const response = await fetch(url, {
         method: 'POST',

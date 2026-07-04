@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Studio — Create</title>
-    <link rel="stylesheet" href="/assets/tailwind.css">
+    <link rel="stylesheet" href="/assets/tailwind.css">
     <style>
         :root {
             --bg-deep: #050505;
@@ -464,7 +464,7 @@
         </aside>
     </main>
 
-    <script>
+    <script>
 
         // ===== Segmented Control Logic =====
         function initSegmented(containerId, indicatorId) {
@@ -596,11 +596,6 @@
 
             try {
                 const payload = { provider, model, prompt };
-                const p = selectedProvider();
-                if (p && p.type === 'openai') {
-                    const size = AR_TO_SIZE[activeAspect()];
-                    if (size) payload.size = size;
-                }
                 const count = parseInt(document.getElementById('countInput').value, 10);
                 if (count > 1) payload.n = count;
 
