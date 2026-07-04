@@ -20,6 +20,9 @@ const __dirname = path.dirname(__filename);
 const isMainModule = process.argv[1] === __filename;
 
 const app = express();
+// Behind a reverse proxy (nginx/Cloudflare): trust the first hop so req.ip is the
+// real client IP for rate limiting. Override with TRUST_PROXY (0 = direct exposure).
+app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 1));
 const PORT = process.env.PORT || 8787;
 const AUTH_PASSWORD = process.env.AUTH_PASSWORD;
 // Signed token stored in the auth cookie instead of the plaintext password.
