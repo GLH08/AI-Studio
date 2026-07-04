@@ -65,4 +65,9 @@ describe('Authentication (AUTH_PASSWORD enabled)', () => {
         const res = await fetch(`${base}/api/images`, { headers: { Cookie: `auth=${PASSWORD}` } });
         assert.strictEqual(res.status, 401);
     });
+
+    it('serves /assets without auth (the login page needs its CSS/fonts)', async () => {
+        const res = await fetch(`${base}/assets/tailwind.css`);
+        assert.strictEqual(res.status, 200);
+    });
 });

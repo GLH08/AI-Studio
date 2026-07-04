@@ -156,6 +156,9 @@ const loginLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+// Public static assets (CSS/fonts) — served before auth so the login page is styled
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
+
 // Authentication Middleware
 app.use((req, res, next) => {
     if (!AUTH_PASSWORD) return next();
