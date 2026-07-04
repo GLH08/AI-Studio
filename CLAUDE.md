@@ -17,6 +17,7 @@ npm test         # Run tests (node --test test/*.test.js)
 npm run lint     # Lint with ESLint
 npm run lint:fix # Auto-fix linting issues
 npm run validate # Validate environment configuration
+npm run build    # Compile Tailwind -> assets/tailwind.css (after editing HTML)
 ```
 
 ## Architecture
@@ -71,6 +72,14 @@ If `AUTH_PASSWORD` is set, all routes except `/login.html` and `/api/login` requ
 - `POST /api/videos/text-to-video` / `POST /api/videos/image-to-video` — Manually add a video URL
 - `PATCH /api/images/:id/hide` / `PATCH /api/videos/:id/hide` — Hide items from gallery
 - `DELETE /api/images/:id` / `DELETE /api/videos/:id` — Delete items
+
+## Frontend
+
+Multi-page, no framework: `index.html` (Create), `library.html` (Gallery/Collection/Video), `login.html` — each a standalone page with an inline `<script>` (liquid-glass dark UI, floating capsule nav).
+
+Assets are **self-hosted** (no CDN) so the CSP can stay tight (`script-src 'self' 'unsafe-inline'`, no `unsafe-eval` or external origins):
+- Tailwind compiles to `assets/tailwind.css` via `npm run build` (the built CSS is **committed**, so deployment stays build-free — rebuild after changing HTML classes).
+- Inter font lives in `assets/fonts/`; Lucide icons are inlined as SVG.
 
 ## Testing
 

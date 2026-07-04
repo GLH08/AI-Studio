@@ -4,19 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Studio — Sign In</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'] },
-                }
-            }
-        }
-    </script>
+    <link rel="stylesheet" href="/assets/tailwind.css">
     <style>
         :root {
             --bg-deep: #050505;
@@ -202,7 +190,7 @@
 
     <!-- Top Right Theme Toggle -->
     <button class="theme-btn fixed top-6 right-6 z-50" id="themeToggle" title="Toggle theme">
-        <i data-lucide="moon" class="w-4 h-4"></i>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" /></svg>
     </button>
 
     <!-- Login Card -->
@@ -213,7 +201,7 @@
             <div class="w-16 h-16 rounded-2xl flex items-center justify-center"
                  style="background: linear-gradient(135deg, #0A84FF, #BF5AF2);
                         box-shadow: 0 8px 32px rgba(10,132,255,0.3);">
-                <i data-lucide="sparkles" class="w-7 h-7 text-white"></i>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7 text-white"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" /> <path d="M20 2v4" /> <path d="M22 4h-4" /> <circle cx="4" cy="20" r="2" /></svg>
             </div>
         </div>
 
@@ -237,7 +225,7 @@
 
             <button type="submit" class="btn-primary w-full h-13 flex items-center justify-center gap-2 mt-2">
                 <span>Sign In</span>
-                <i data-lucide="arrow-right" class="w-4 h-4 relative z-10"></i>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 relative z-10"><path d="M5 12h14" /> <path d="m12 5 7 7-7 7" /></svg>
             </button>
 
             <p id="errorMsg" class="hidden text-center text-sm mt-1" style="color: #FF375F;">
@@ -253,8 +241,7 @@
         </div>
     </div>
 
-    <script>
-        lucide.createIcons();
+    <script>
 
         // Theme toggle (visual only for preview)
         const themeToggle = document.getElementById('themeToggle');
@@ -263,9 +250,8 @@
             isDark = !isDark;
             document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
             themeToggle.innerHTML = isDark
-                ? '<i data-lucide="moon" class="w-4 h-4"></i>'
-                : '<i data-lucide="sun" class="w-4 h-4"></i>';
-            lucide.createIcons();
+                ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" /></svg>'
+                : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><circle cx="12" cy="12" r="4" /> <path d="M12 2v2" /> <path d="M12 20v2" /> <path d="m4.93 4.93 1.41 1.41" /> <path d="m17.66 17.66 1.41 1.41" /> <path d="M2 12h2" /> <path d="M20 12h2" /> <path d="m6.34 17.66-1.41 1.41" /> <path d="m19.07 4.93-1.41 1.41" /></svg>';
         });
 
         // Login: POST to /api/login, redirect home on success

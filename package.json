@@ -10,7 +10,8 @@
     "test": "node --test test/*.test.js",
     "lint": "eslint *.js",
     "lint:fix": "eslint *.js --fix",
-    "validate": "node scripts/validate-config.js"
+    "validate": "node scripts/validate-config.js",
+    "build": "tailwindcss -i src/input.css -o assets/tailwind.css --minify"
   },
   "keywords": [
     "fal.ai",
@@ -24,21 +25,24 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "node-fetch": "^3.3.2",
-    "cors": "^2.8.5",
     "body-parser": "^1.20.2",
-    "form-data": "^4.0.0",
-    "cookie-parser": "^1.4.6",
-    "helmet": "^7.1.0",
-    "express-rate-limit": "^7.1.5",
     "compression": "^1.7.4",
-    "morgan": "^1.10.0"
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "form-data": "^4.0.0",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0",
+    "node-fetch": "^3.3.2"
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "devDependencies": {
-    "eslint": "^8.56.0"
+    "@fontsource-variable/inter": "^5.2.8",
+    "eslint": "^8.56.0",
+    "lucide-static": "^1.23.0",
+    "tailwindcss": "^3.4.19"
   }
 }
