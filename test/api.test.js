@@ -186,3 +186,35 @@ describe('SSRF proxy validation', () => {
         assert.strictEqual(res.status, 403);
     });
 });
+
+describe('GET /api/images pagination', () => {
+    before(() => {
+        resetDb();
+        for (let i = 0; i < 5; i++) addImageToDb({ id: `p${i}`, model: 'm', url: `http://x/${i}.png` });
+    });
+
+    it('returns all when no limit and exposes X-Total-Count (back-compat)', async () => {
+        const res = await fetch(`${base}/api/images`);
+        assert.strictEqual(res.status, 200);
+        assert.strictEqual(res.headers.get('x-total-count'), '5');
+        const body = await res.json();
+        assert.strictEqual(body.length, 5);
+    });
+
+    it('respects limit and offset', async () => {
+        const res = await fetch(`${base}/api/images?limit=2&offset=1`);
+        const body = await res.json();
+        assert.strictEqual(body.length, 2);
+        assert.strictEqual(res.headers.get('x-total-count'), '5');
+    });
+});
+
+describe('Removed /api/upload endpoint', () => {
+    it('returns 404 (endpoint removed)', async () => {
+        const res = await fetch(`${base}/api/upload`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageData: 'data:image/png;base64,AAAA' })
+        });
+        assert.strictEqual(res.status, 404);
+    });
+});

@@ -147,6 +147,15 @@ const limiter = rateLimit({
 app.use('/api/proxy/video', (req, res, next) => next());
 app.use('/api/', limiter);
 
+// Stricter limiter for login to slow brute-force attempts
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: parseInt(process.env.LOGIN_RATE_LIMIT_MAX, 10) || 10,
+    message: { error: 'Too many login attempts. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 // Authentication Middleware
 app.use((req, res, next) => {
     if (!AUTH_PASSWORD) return next();
@@ -182,7 +191,7 @@ app.get('/index.html', (req, res) => {
 app.use(express.static(__dirname));
 
 // Login Route
-app.post('/api/login', (req, res) => {
+app.post('/api/login', loginLimiter, (req, res) => {
     const { password } = req.body;
     if (password === AUTH_PASSWORD) {
         res.cookie('auth', AUTH_TOKEN, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 });
@@ -641,8 +650,13 @@ app.post('/api/generate', async (req, res) => {
 
 app.get('/api/images', (req, res) => {
     const db = readDb();
-    // Return all images (including hidden) — frontend handles display
-    res.json(db.images);
+    const images = db.images || [];
+    // Total exposed via header so clients can paginate without a body-shape change
+    res.setHeader('X-Total-Count', images.length);
+    // Optional pagination: ?limit & ?offset. Without limit, returns everything (back-compat).
+    const limit = parseInt(req.query.limit, 10);
+    const offset = parseInt(req.query.offset, 10) || 0;
+    res.json(Number.isInteger(limit) && limit >= 0 ? images.slice(offset, offset + limit) : images);
 });
 
 app.get('/api/images/stats', (req, res) => {
@@ -727,8 +741,11 @@ app.patch('/api/images/:id/unhide', (req, res) => {
 
 app.get('/api/videos', (req, res) => {
     const db = readDb();
-    // Return all videos (including hidden) — frontend handles display
-    res.json(db.videos || []);
+    const videos = db.videos || [];
+    res.setHeader('X-Total-Count', videos.length);
+    const limit = parseInt(req.query.limit, 10);
+    const offset = parseInt(req.query.offset, 10) || 0;
+    res.json(Number.isInteger(limit) && limit >= 0 ? videos.slice(offset, offset + limit) : videos);
 });
 
 app.get('/api/videos/stats', (req, res) => {
@@ -1107,27 +1124,6 @@ app.get('/api/proxy/image', async (req, res) => {
         if (fs.existsSync(cachePath)) {
             fs.unlinkSync(cachePath);
         }
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ==================== Image Upload ====================
-
-app.post('/api/upload', async (req, res) => {
-    try {
-        const { imageData } = req.body;
-
-        if (!imageData) {
-            return res.status(400).json({ error: 'No image data provided' });
-        }
-
-        const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
-        const filename = `upload-${Date.now()}.png`;
-        const mockUrl = `data:image/png;base64,${base64Data}`;
-
-        res.json({ url: mockUrl, filename });
-    } catch (error) {
-        console.error('Upload error:', error);
         res.status(500).json({ error: error.message });
     }
 });

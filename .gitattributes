@@ -1,0 +1,4 @@
+# Force LF line endings for text files so the repo stays consistent across
+# platforms and ESLint's `linebreak-style: unix` passes on Windows checkouts
+# (git autocrlf would otherwise produce CRLF in the working tree).
+* text=auto eol=lf
