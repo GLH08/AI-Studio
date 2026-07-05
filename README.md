@@ -74,6 +74,8 @@ npm start
 | `PORT` | ❌ | 8787 | 平台的运行端口 |
 | `AUTH_PASSWORD` | ❌ | - | 设置此项将开启独立的访问密码墙 |
 | `RATE_LIMIT_MAX_REQUESTS` | ❌ | 500 | IP 速率限制，防止恶意并发调用 |
+| `VIDEO_POLL_INTERVAL_MS` | ❌ | 3000 | 视频状态轮询间隔（毫秒） |
+| `VIDEO_POLL_TIMEOUT_MS` | ❌ | 90000 | 视频状态轮询超时（毫秒，建议 < CF 100s） |
 
 ### 多提供商 (Provider) 配置示例
 | 变量 | 说明 | 示例值 |
@@ -105,16 +107,35 @@ Content-Type: application/json
 
 {
   "provider": "provider-1",
-  "model": "dall-e-3",
+  "model": "grok-imagine-image-quality",
   "prompt": "Cyberpunk city night view",
-  "size": "1024x1024",     // 可选（仅 OpenAI 渠道）
-  "quality": "hd",          // 可选（仅 OpenAI 渠道）
-  "style": "vivid",         // 可选（仅 OpenAI 渠道）
-  "n": 1                     // 可选，生成数量
+  "n": 1,
+  "params": {                 // 可选：原样透传给上游 API
+    "aspect_ratio": "16:9",
+    "resolution": "2k"
+  }
 }
 ```
 
-> 返回单张结果时为图片记录对象；`n > 1` 时返回 `{ results: [...], count }`。若配置了 Chevereto，生成图片会并行上传并改写为图床地址。
+> `params` 里的字段（`aspect_ratio`、`resolution`、`response_format` 等）**原样透传**给上游，不硬编码任何渠道；顶层 `model`/`prompt` 始终优先。返回单张结果时为图片记录对象；`n > 1` 时返回 `{ results: [...], count }`。若配置了 Chevereto，生成图片会并行上传并改写为图床地址。
+
+### 文生视频生成（异步轮询）
+
+仅适用于暴露了 xAI 风格 `/videos/generations` 端点的渠道（如通过兼容网关的 Grok）。服务端 POST 后拿到 `request_id`，随后轮询直到视频就绪再返回。
+
+```bash
+POST /api/generate/video
+Content-Type: application/json
+
+{
+  "provider": "provider-1",
+  "model": "grok-imagine-video",
+  "prompt": "Timelapse of a flower blooming",
+  "params": { "aspect_ratio": "16:9", "resolution": "720p", "duration": 10 }
+}
+```
+
+> 轮询间隔/超时由 `VIDEO_POLL_INTERVAL_MS`（默认 3000）与 `VIDEO_POLL_TIMEOUT_MS`（默认 90000，压在 Cloudflare 100s 之下）控制。超时返回 `504` 并附带 `request_id`（视频可能仍在生成）。
 
 ### 手动收藏（图片 / 视频链接）
 

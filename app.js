@@ -271,22 +271,38 @@ function addVideoToDb(video) {
 
 // ==================== API Adapters ====================
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Build the upstream request body from { model, prompt, n, params }.
+ * `params` (arbitrary caller-supplied object) is passed through verbatim so any
+ * provider-specific field (aspect_ratio, resolution, duration, response_format…)
+ * reaches the upstream — nothing is hardcoded per channel. Top-level model/prompt
+ * stay authoritative (params can never override routing). n is included only for
+ * image generation (videos take no n).
+ */
+function buildMediaBody({ model, prompt, n, params }, includeN) {
+    const extra = (params && typeof params === 'object' && !Array.isArray(params)) ? { ...params } : {};
+    delete extra.model;
+    delete extra.prompt;
+    const body = { ...extra, model, prompt };
+    if (includeN) {
+        const topN = Number.isInteger(n) && n > 0 ? n : null;
+        const extraN = Number.isInteger(extra.n) && extra.n > 0 ? extra.n : null;
+        body.n = topN || extraN || 1;
+    } else {
+        delete body.n;
+    }
+    return body;
+}
+
 /**
  * Standard OpenAI Images API
  * POST /v1/images/generations
  */
 async function callOpenAI(provider, params) {
     const url = `${provider.baseUrl}/images/generations`;
-    const body = {
-        model: params.model,
-        prompt: params.prompt,
-        n: params.n || 1,
-    };
-
-    if (params.size) body.size = params.size;
-    if (params.quality) body.quality = params.quality;
-    if (params.style) body.style = params.style;
-    if (params.response_format) body.response_format = params.response_format;
+    const body = buildMediaBody(params, true);
 
     console.log(`[OpenAI] Calling ${url} with model ${params.model}`);
     console.log('[OpenAI] Request body:', JSON.stringify(body));
@@ -497,6 +513,93 @@ async function callGemini(provider, params) {
 }
 
 /**
+ * Video generation (async): POST /v1/videos/generations returns a request_id,
+ * then poll GET /v1/videos/{request_id} until a video URL appears. The status
+ * response is passed through verbatim by the gateway (shape is the upstream's),
+ * so request-id and URL extraction are tolerant / field-agnostic.
+ */
+function extractRequestId(body) {
+    if (!body || typeof body !== 'object') return null;
+    for (const key of ['request_id', 'id']) {
+        if (typeof body[key] === 'string' && body[key].trim()) return body[key].trim();
+    }
+    for (const parent of ['data', 'video']) {
+        const p = body[parent];
+        if (p && typeof p === 'object') {
+            for (const key of ['request_id', 'id']) {
+                if (typeof p[key] === 'string' && p[key].trim()) return p[key].trim();
+            }
+        }
+    }
+    return null;
+}
+
+function extractVideoUrl(body) {
+    if (!body || typeof body !== 'object') return null;
+    const fields = [body.url, body.video_url, body.video?.url, body.data?.url, body.data?.video_url];
+    const urls = fields.filter(u => typeof u === 'string' && /^https?:\/\//.test(u));
+    const mp4 = urls.find(u => /\.mp4(\?|$)/i.test(u));
+    if (mp4) return mp4;
+    // Fallback: scan the whole JSON for an mp4 URL
+    const m = JSON.stringify(body).match(/https?:\/\/[^\s"'<>]+\.mp4(?:\?[^\s"'<>]*)?/i);
+    if (m) return m[0];
+    return urls[0] || null;
+}
+
+function videoStatusFailed(body) {
+    const status = String(body?.status || body?.state || body?.data?.status || '').toLowerCase();
+    return ['failed', 'error', 'canceled', 'cancelled'].includes(status);
+}
+
+async function callVideoGeneration(provider, params) {
+    const genUrl = `${provider.baseUrl}/videos/generations`;
+    const body = buildMediaBody(params, false);
+
+    console.log(`[Video] Calling ${genUrl} with model ${params.model}`);
+    console.log('[Video] Request body:', JSON.stringify(body));
+
+    const genRes = await fetch(genUrl, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${provider.apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    if (!genRes.ok) {
+        const text = await genRes.text();
+        throw new Error(`Video generation error ${genRes.status}: ${text}`);
+    }
+
+    const genJson = await genRes.json();
+    // Some responses may already carry the URL; otherwise poll by request_id.
+    const immediate = extractVideoUrl(genJson);
+    if (immediate) return { url: immediate, allUrls: [immediate] };
+
+    const requestId = extractRequestId(genJson);
+    if (!requestId) throw new Error('Video generation returned no request_id');
+
+    const interval = Number(process.env.VIDEO_POLL_INTERVAL_MS) || 3000;
+    const timeout = Number(process.env.VIDEO_POLL_TIMEOUT_MS) || 90000;
+    const deadline = Date.now() + timeout;
+    const statusUrl = `${provider.baseUrl}/videos/${encodeURIComponent(requestId)}`;
+
+    while (Date.now() < deadline) {
+        await sleep(interval);
+        const pollRes = await fetch(statusUrl, {
+            headers: { 'Authorization': `Bearer ${provider.apiKey}`, 'Accept': 'application/json' }
+        });
+        if (!pollRes.ok) continue; // transient upstream hiccup — keep polling until deadline
+        const pollJson = await pollRes.json().catch(() => ({}));
+        if (videoStatusFailed(pollJson)) throw new Error('Video generation failed upstream');
+        const url = extractVideoUrl(pollJson);
+        if (url) return { url, allUrls: [url] };
+    }
+
+    const err = new Error('Video generation timed out');
+    err.code = 'VIDEO_TIMEOUT';
+    err.requestId = requestId;
+    throw err;
+}
+
+/**
  * Route to the correct adapter based on provider type
  */
 async function callProvider(provider, params) {
@@ -540,13 +643,14 @@ async function uploadToChevereto(fileUrl, isVideo = false, providerApiKey = null
         const response = await fetch(fileUrl, { headers });
         if (!response.ok) throw new Error(`Failed to download file. Status: ${response.status}`);
 
-        // Use response.buffer() for Node.js to get Buffer directly
-        const buffer = await response.buffer();
+        // node-fetch v3 deprecated .buffer(); arrayBuffer() -> Node Buffer for form-data
+        const buffer = Buffer.from(await response.arrayBuffer());
 
         const formData = new FormData();
         const filename = isVideo ? 'video.mp4' : 'image.png';
         const mimeType = isVideo ? 'video/mp4' : 'image/png';
-        formData.append('source', new Blob([buffer], { type: mimeType }), filename);
+        // form-data needs a Buffer/Stream/string here — a Web Blob throws "source.on is not a function"
+        formData.append('source', buffer, { filename, contentType: mimeType });
         if (albumId) {
             formData.append('album_id', albumId);
         }
@@ -606,7 +710,7 @@ app.get('/api/providers', (req, res) => {
 
 // Generate Endpoint (text-to-image)
 app.post('/api/generate', async (req, res) => {
-    const { provider: providerId, model, prompt, size, quality, style, n } = req.body;
+    const { provider: providerId, model, prompt, n, params } = req.body;
 
     if (!providerId) return res.status(400).json({ error: 'Missing provider.' });
     const provider = getProvider(providerId);
@@ -618,7 +722,7 @@ app.post('/api/generate', async (req, res) => {
     try {
         console.log(`[Generate] provider=${provider.name} type=${provider.type} model=${model}`);
 
-        const result = await callProvider(provider, { model, prompt, size, quality, style, n: n || 1 });
+        const result = await callProvider(provider, { model, prompt, n, params });
 
         const allUrls = result.allUrls || [result.url];
         const timestamp = new Date().toISOString();
@@ -636,8 +740,7 @@ app.post('/api/generate', async (req, res) => {
                 id, url: cheveretoUrl || mediaUrl,
                 prompt, model,
                 provider: provider.name, providerType: provider.type,
-                size: size || null,
-                quality: quality || null, style: style || null,
+                params: params || null,
                 timestamp, hidden: false,
             };
         }));
@@ -649,6 +752,54 @@ app.post('/api/generate', async (req, res) => {
 
     } catch (error) {
         console.error('Generation error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Video Generation Endpoint (text-to-video, async polling)
+app.post('/api/generate/video', async (req, res) => {
+    const { provider: providerId, model, prompt, params } = req.body;
+
+    if (!providerId) return res.status(400).json({ error: 'Missing provider.' });
+    const provider = getProvider(providerId);
+    if (!provider) return res.status(400).json({ error: `Unknown provider: ${providerId}` });
+    if (!model) return res.status(400).json({ error: 'Missing model.' });
+    if (!provider.models.includes(model)) return res.status(400).json({ error: `Model "${model}" not available.` });
+    if (!prompt) return res.status(400).json({ error: 'Missing prompt.' });
+
+    try {
+        console.log(`[GenerateVideo] provider=${provider.name} type=${provider.type} model=${model}`);
+
+        const result = await callVideoGeneration(provider, { model, prompt, params });
+
+        let cheveretoUrl = null;
+        try {
+            cheveretoUrl = await uploadToChevereto(result.url, true, provider.apiKey);
+        } catch (e) {
+            console.error('Chevereto video upload failed', e);
+        }
+
+        const record = {
+            id: 'gen-vid-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+            url: cheveretoUrl || result.url,
+            prompt, model,
+            provider: provider.name, providerType: provider.type,
+            params: params || null,
+            type: 'text-to-video', source: 'generated',
+            timestamp: new Date().toISOString(), hidden: false,
+        };
+
+        addVideoToDb(record);
+        res.json(record);
+
+    } catch (error) {
+        if (error.code === 'VIDEO_TIMEOUT') {
+            return res.status(504).json({
+                error: 'Video generation timed out. It may still be processing.',
+                request_id: error.requestId
+            });
+        }
+        console.error('Video generation error:', error);
         res.status(500).json({ error: error.message });
     }
 });

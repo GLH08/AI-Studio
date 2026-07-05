@@ -174,28 +174,6 @@
             color: rgba(255,255,255,0.9);
         }
 
-        /* ===== Aspect Ratio Buttons ===== */
-        .ratio-btn {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 14px;
-            padding: 12px 8px;
-            transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
-            cursor: pointer;
-            color: rgba(255,255,255,0.4);
-        }
-        .ratio-btn:hover {
-            background: rgba(255,255,255,0.07);
-            border-color: rgba(255,255,255,0.1);
-            color: rgba(255,255,255,0.7);
-        }
-        .ratio-btn.active {
-            background: rgba(255,255,255,0.1);
-            border-color: rgba(10, 132, 255, 0.35);
-            color: rgba(255,255,255,0.95);
-            box-shadow: 0 0 16px rgba(10,132,255,0.1);
-        }
-
         /* ===== Generate Button ===== */
         .btn-generate {
             background: linear-gradient(135deg, #0A84FF 0%, #BF5AF2 50%, #FF375F 100%);
@@ -377,7 +355,6 @@
                         <div class="segmented" id="modeSegmented">
                             <div class="segmented-indicator" id="modeIndicator"></div>
                             <button class="segmented-btn active" data-mode="image">Image</button>
-                            <button class="segmented-btn" data-mode="edit">Edit</button>
                             <button class="segmented-btn" data-mode="video">Video</button>
                         </div>
                     </div>
@@ -398,53 +375,15 @@
                         <h3 class="text-[13px] font-semibold" style="color: rgba(255,255,255,0.7);">Parameters</h3>
                     </div>
 
-                    <!-- Aspect Ratio -->
-                    <div class="space-y-2">
-                        <label class="text-[11px] font-medium ml-1" style="color: rgba(255,255,255,0.3);">Aspect Ratio</label>
-                        <div class="grid grid-cols-3 gap-2">
-                            <button class="ratio-btn active flex flex-col items-center gap-1.5">
-                                <div class="w-4 h-4 rounded-sm" style="border: 1.5px solid currentColor;"></div>
-                                <span class="text-[10px] font-medium">1:1</span>
-                            </button>
-                            <button class="ratio-btn flex flex-col items-center gap-1.5">
-                                <div class="w-5 h-3 rounded-sm" style="border: 1.5px solid currentColor;"></div>
-                                <span class="text-[10px] font-medium">16:9</span>
-                            </button>
-                            <button class="ratio-btn flex flex-col items-center gap-1.5">
-                                <div class="w-3 h-5 rounded-sm" style="border: 1.5px solid currentColor;"></div>
-                                <span class="text-[10px] font-medium">9:16</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Image Count -->
+                    <!-- Parameters (JSON) — single source of truth, passed straight to the provider -->
                     <div class="space-y-2">
                         <div class="flex justify-between items-center ml-1">
-                            <label class="text-[11px] font-medium" style="color: rgba(255,255,255,0.3);">Number of Images</label>
-                            <span class="text-[11px] font-medium tabular-nums" style="color: rgba(255,255,255,0.6);" id="countValue">1</span>
+                            <label class="text-[11px] font-medium" style="color: rgba(255,255,255,0.3);">Parameters (JSON)</label>
+                            <button id="resetParams" type="button" class="text-[10px] font-medium transition-colors hover:text-white" style="color: rgba(255,255,255,0.3);">Reset</button>
                         </div>
-                        <input type="range" min="1" max="4" value="1" id="countInput" class="w-full h-1 rounded-full appearance-none cursor-pointer"
-                               style="background: rgba(255,255,255,0.08); accent-color: #0A84FF;"
-                               oninput="document.getElementById('countValue').textContent = this.value">
-                    </div>
-
-                    <!-- Duration (for video) -->
-                    <div class="space-y-2">
-                        <label class="text-[11px] font-medium ml-1" style="color: rgba(255,255,255,0.3);">Duration</label>
-                        <select class="glass-input">
-                            <option>6 seconds</option>
-                            <option>10 seconds</option>
-                            <option>15 seconds</option>
-                        </select>
-                    </div>
-
-                    <!-- Resolution -->
-                    <div class="space-y-2">
-                        <label class="text-[11px] font-medium ml-1" style="color: rgba(255,255,255,0.3);">Resolution</label>
-                        <select class="glass-input">
-                            <option>720p</option>
-                            <option>480p</option>
-                        </select>
+                        <textarea id="paramsInput" class="glass-input" rows="6" spellcheck="false"
+                                  style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; line-height: 1.5; resize: vertical; min-height: 120px;"></textarea>
+                        <p class="text-[10px] ml-1 leading-relaxed" style="color: rgba(255,255,255,0.25);">Passed straight to the provider. Leave blank for defaults.</p>
                     </div>
                 </div>
             </div>
@@ -501,21 +440,43 @@
         initSegmented('navSegmented', 'navIndicator');
         initSegmented('modeSegmented', 'modeIndicator');
 
-        // ===== Aspect Ratio Buttons =====
-        document.querySelectorAll('.ratio-btn').forEach(btn => {
+        // ===== Mode + Parameters (JSON) =====
+        const PARAM_TEMPLATES = {
+            image: '{\n  "aspect_ratio": "16:9",\n  "resolution": "2k",\n  "n": 1\n}',
+            video: '{\n  "aspect_ratio": "16:9",\n  "resolution": "720p",\n  "duration": 10\n}'
+        };
+        let currentMode = 'image';
+        const paramsInput = document.getElementById('paramsInput');
+        paramsInput.value = PARAM_TEMPLATES.image;
+
+        document.getElementById('resetParams').addEventListener('click', () => {
+            paramsInput.value = PARAM_TEMPLATES[currentMode];
+        });
+
+        // Switching mode swaps the default template, but only if the user hasn't
+        // customized it (blank or still holding one of the known templates).
+        document.querySelectorAll('#modeSegmented .segmented-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.querySelectorAll('.ratio-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+                const mode = btn.dataset.mode;
+                if (mode === currentMode) return;
+                const trimmed = paramsInput.value.trim();
+                if (trimmed === '' || trimmed === PARAM_TEMPLATES.image.trim() || trimmed === PARAM_TEMPLATES.video.trim()) {
+                    paramsInput.value = PARAM_TEMPLATES[mode];
+                }
+                currentMode = mode;
             });
         });
 
         // ===== API Wiring =====
-        const AR_TO_SIZE = { '1:1': '1024x1024', '16:9': '1792x1024', '9:16': '1024x1792' };
-
         function getImageProxyUrl(url) {
             if (!url) return '';
             if (url.startsWith('/api/proxy/') || url.startsWith('data:')) return url;
             return `/api/proxy/image?url=${encodeURIComponent(url)}`;
+        }
+        function getVideoProxyUrl(url) {
+            if (!url) return '';
+            if (url.startsWith('/api/proxy/')) return url;
+            return `/api/proxy/video?url=${encodeURIComponent(url)}`;
         }
         function escapeHtml(t) {
             if (!t) return '';
@@ -569,15 +530,15 @@
         const loadingState = document.getElementById('loadingState');
         const canvas = loadingState.parentElement;
 
-        function activeAspect() {
-            const el = document.querySelector('.ratio-btn.active span');
-            return el ? el.textContent.trim() : '1:1';
-        }
-        function renderResult(data) {
+        function renderResult(data, mode) {
             canvas.querySelector('.result-media')?.remove();
             const wrap = document.createElement('div');
             wrap.className = 'result-media absolute inset-0 flex items-center justify-center p-6 animate-in';
-            wrap.innerHTML = `<img src="${getImageProxyUrl(data.url)}" alt="Generated" class="max-w-full max-h-full object-contain rounded-2xl" style="box-shadow: 0 24px 64px rgba(0,0,0,0.5);">`;
+            if (mode === 'video') {
+                wrap.innerHTML = `<video src="${getVideoProxyUrl(data.url)}" controls autoplay loop playsinline class="max-w-full max-h-full object-contain rounded-2xl" style="box-shadow: 0 24px 64px rgba(0,0,0,0.5);"></video>`;
+            } else {
+                wrap.innerHTML = `<img src="${getImageProxyUrl(data.url)}" alt="Generated" class="max-w-full max-h-full object-contain rounded-2xl" style="box-shadow: 0 24px 64px rgba(0,0,0,0.5);">`;
+            }
             canvas.appendChild(wrap);
         }
 
@@ -589,6 +550,20 @@
             if (!model) { alert('Please select a model'); return; }
             if (!prompt) { alert('Please enter a prompt'); return; }
 
+            // Optional JSON params — passed straight through to the provider.
+            let params;
+            const raw = paramsInput.value.trim();
+            if (raw) {
+                try {
+                    params = JSON.parse(raw);
+                    if (typeof params !== 'object' || Array.isArray(params)) throw new Error('must be a JSON object');
+                } catch (e) {
+                    alert('Invalid Parameters JSON: ' + e.message);
+                    return;
+                }
+            }
+
+            const mode = currentMode;
             generateBtn.disabled = true;
             emptyState.classList.add('hidden');
             canvas.querySelector('.result-media')?.remove();
@@ -596,10 +571,10 @@
 
             try {
                 const payload = { provider, model, prompt };
-                const count = parseInt(document.getElementById('countInput').value, 10);
-                if (count > 1) payload.n = count;
+                if (params) payload.params = params;
+                const endpoint = mode === 'video' ? '/api/generate/video' : '/api/generate';
 
-                const res = await fetch('/api/generate', {
+                const res = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -610,7 +585,7 @@
                     throw new Error(err.error || `Request failed: ${res.status}`);
                 }
                 const data = await res.json();
-                renderResult(data.results ? data.results[0] : data);
+                renderResult(data.results ? data.results[0] : data, mode);
             } catch (e) {
                 alert('Error: ' + e.message);
                 emptyState.classList.remove('hidden');
