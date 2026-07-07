@@ -1,0 +1,6 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/backend/security.md", "reason": "SSRF whitelist/private-IP/redirect (R2/R6), CORS same-origin (R5), rate-limit config (R3)"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "readDb/writeDb atomic + in-memory cache invariant, single write path (R4/R11)"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "validate-first, {error} responses, error.code, status codes (R2/R3/R6)"}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "single-file layout, section placement, export block for testable helpers (R10/R11)"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "env-only config, params passthrough, node --test, review checklist (all)"}

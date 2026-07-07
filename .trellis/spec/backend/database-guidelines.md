@@ -17,22 +17,37 @@ The shape is fixed:
 }
 ```
 
-All access goes through four helpers in the Database Helpers section (`app.js:210`). Do not read
+All access goes through the helpers in the Database Helpers section (`app.js:210`). Do not read
 or write `db.json` directly anywhere else.
+
+## In-Memory Cache (write-through)
+
+The DB is cached in a module-level `dbCache`. `readDb()` serves from memory (loading + normalizing
+once on first call); `writeDb()` persists atomically **and** updates `dbCache`, so memory and disk
+never diverge after a successful write. This means list/stats/mutation endpoints never re-parse the
+whole file per request. Invariants to preserve:
+
+- **The single write path is `writeDb`.** Anything that mutates state must persist through it (or
+  through `addImageToDb`/`addVideoToDb`, which call it) — otherwise the cache goes stale.
+- Do not mutate the object returned by `readDb()` without following up with `writeDb()`.
+- `__resetDbCache()` (`app.js`) exists only for tests that write `db.json` on disk directly and
+  need the next `readDb` to re-read.
 
 ## Accessors
 
-- `readDb()` (`app.js:212`) — returns the parsed DB, or a fresh empty structure if the file is
-  missing **or unparseable** (it never throws). It also back-fills newer fields (`videos`,
-  `videoTotal`, `videoByModel`) so older DB files keep working. This is the project's substitute
-  for migrations: tolerate old shapes on read.
+- `readDb()` (`app.js:212`) — returns the cached DB. On first load: a **missing** file yields a
+  fresh empty structure, but a **corrupt/unparseable existing** file makes it **throw** (loud) —
+  it must never return an empty DB that a following `writeDb` would persist over real data (that
+  was a data-loss bug). It back-fills newer/missing fields (`videos`, and a missing `statistics`
+  object and its counters) so older DB files keep working — the project's substitute for migrations.
 - `writeDb(data)` (`app.js:227`) — **atomic**: serializes to `db.json.tmp`, then `rename`s over
-  the target so an interrupted write can never leave a half-written file. Always persist through
-  this; never `fs.writeFileSync(DB_FILE, ...)` directly.
-- `addImageToDb(image)` / `addVideoToDb(video)` (`app.js:235`, `255`) — the **only** way to
-  insert. They `unshift` (newest first), bump the matching statistics counters, then `writeDb`.
-  They wrap everything in try/catch and log on failure rather than throwing, so a persistence
-  error never crashes a request.
+  the target so an interrupted write can never leave a half-written file; then updates `dbCache`.
+  Always persist through this; never `fs.writeFileSync(DB_FILE, ...)` directly.
+- `addImageToDb(image)` / `addVideoToDb(video)` — the **only** way to insert. They `unshift`
+  (newest first), bump the matching statistics counters, then `writeDb`. They wrap everything in
+  try/catch and log on failure rather than throwing, so a persistence error never crashes a request.
+- `makeDeleteHandler` / `makeHideHandler` — shared factories generate the images & videos
+  delete/hide/unhide route handlers from one implementation (`collection` = `images` | `videos`).
 
 ## Read-Modify-Write Pattern
 
@@ -41,13 +56,13 @@ memory, write it back:
 
 ```js
 const db = readDb();
-const image = db.images.find(img => img.id === id);
-if (!image) return res.status(404).json({ error: 'Image not found' });
-image.hidden = true;
+const item = (db[collection] || []).find(i => i.id === id);
+if (!item) return res.status(404).json({ error: `${label} not found` });
+item.hidden = hidden;
 writeDb(db);
 ```
 
-See `app.js:862` (delete) and `app.js:874` (hide) for the canonical shape. Delete uses
+This lives in the shared `makeHideHandler` / `makeDeleteHandler` factories. Delete uses
 `filter` + length comparison to detect a missing id and return 404.
 
 ## Records
@@ -66,6 +81,7 @@ read-modify-write window as small as possible.
 
 ## Anti-Patterns
 
-- Bypassing `writeDb` / `addImageToDb` / `addVideoToDb` and touching `db.json` directly.
-- Letting `readDb` throw on a corrupt file — it must degrade to an empty DB.
+- Bypassing `writeDb` / `addImageToDb` / `addVideoToDb` and touching `db.json` directly (also goes stale vs `dbCache`).
+- Making `readDb` return an empty DB on a corrupt existing file — it must **throw** so a following write can't overwrite real data. (A *missing* file → empty DB is fine.)
+- Mutating the object from `readDb()` without calling `writeDb()` (leaves the cache/disk inconsistent).
 - Adding a stats counter without updating both the `add*` helper and the back-fill in `readDb`.

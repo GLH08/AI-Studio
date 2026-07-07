@@ -1,0 +1,5 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/backend/security.md", "reason": "verify SSRF private-range+redirect, CORS removal, rate-limit env honored"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "verify cache/disk invariant, no direct db.json writes, readDb never wipes"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "verify response contract + status codes unchanged"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "verify lint/tests pass + review checklist"}
