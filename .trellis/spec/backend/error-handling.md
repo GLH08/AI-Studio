@@ -1,51 +1,84 @@
 # Error Handling
 
-> How errors are handled in this project.
+> There are no custom error classes. Validation returns early with a 4xx; adapters throw plain
+> `Error`s that route `try/catch` blocks turn into `{ error }` JSON.
 
 ---
 
-## Overview
+## Response Contract
 
-<!--
-Document your project's error handling conventions here.
+Every error response is JSON with a single `error` string:
 
-Questions to answer:
-- What error types do you define?
-- How are errors propagated?
-- How are errors logged?
-- How are errors returned to clients?
--->
+```js
+res.status(400).json({ error: 'Missing prompt.' });
+```
 
-(To be filled by the team)
+Clients rely on this shape everywhere (the frontend reads `data.error`). Never return an error
+as plain text, an array, or a different key.
 
----
+## Validate-First (early 400s)
 
-## Error Types
+Route handlers validate input at the top and `return` immediately on the first failure, before
+any side effect. The generation routes are the reference (`app.js:712`, `app.js:760`):
 
-<!-- Custom error classes/types -->
+```js
+if (!providerId) return res.status(400).json({ error: 'Missing provider.' });
+const provider = getProvider(providerId);
+if (!provider) return res.status(400).json({ error: `Unknown provider: ${providerId}` });
+if (!model) return res.status(400).json({ error: 'Missing model.' });
+if (!provider.models.includes(model)) return res.status(400).json({ error: `Model "${model}" not available.` });
+if (!prompt) return res.status(400).json({ error: 'Missing prompt.' });
+```
 
-(To be filled by the team)
+URL inputs are validated with `new URL(...)` in a `try/catch` and, where relevant, against the
+SSRF whitelist returning **403** (`app.js:839`). Missing resources return **404** with the
+read-modify-write pattern (see [Database Guidelines](./database-guidelines.md)).
 
----
+## Status Codes In Use
 
-## Error Handling Patterns
+| Code | When |
+|------|------|
+| 400 | Missing/invalid input (provider, model, prompt, malformed URL) |
+| 401 | Unauthenticated API request (auth middleware) |
+| 403 | URL/domain not on the SSRF whitelist |
+| 404 | Image/video id not found |
+| 500 | Generation or unexpected upstream failure (`error.message`) |
+| 504 | Video generation timeout, or proxy fetch `AbortError` |
 
-<!-- Try-catch patterns, error propagation -->
+## Throwing From Adapters
 
-(To be filled by the team)
+Adapters and helpers throw `new Error(...)` with a descriptive message (including upstream status
+and body text, e.g. `app.js:321`). The route's `try/catch` logs and maps it to a 500:
 
----
+```js
+try {
+    const result = await callProvider(provider, { model, prompt, n, params });
+    // ...
+} catch (error) {
+    console.error('Generation error:', error);
+    res.status(500).json({ error: error.message });
+}
+```
 
-## API Error Responses
+### Typed control flow via `error.code`
 
-<!-- Standard error response format -->
+The one place a code is attached is the video timeout (`app.js:596`): the error carries
+`code = 'VIDEO_TIMEOUT'` and `requestId`, and the route special-cases it to **504** with the
+`request_id` so the client can keep polling. Follow this pattern (a `code` property on a plain
+`Error`) if you need to distinguish a failure mode — do not introduce an error-class hierarchy.
 
-(To be filled by the team)
+## Non-Fatal Failures (log and continue)
 
----
+Some failures must **not** fail the request:
 
-## Common Mistakes
+- Chevereto upload failures return `null` and fall back to the original URL (`app.js:731`, `app.js:681`).
+- `addImageToDb` / `addVideoToDb` catch and log instead of throwing.
+- Proxy cache-write errors delete the partial file and keep serving the stream (`app.js:1151`).
 
-<!-- Error handling mistakes your team has made -->
+Decide deliberately whether a failure is fatal (throw → 500) or degradable (log → continue).
 
-(To be filled by the team)
+## Anti-Patterns
+
+- Sending `res.status(500).send(error)` (leaks stack/objects) — always `{ error: error.message }`.
+- Doing work before validation finishes (e.g. calling a provider before checking `prompt`).
+- Swallowing an error silently with no `console.error`.

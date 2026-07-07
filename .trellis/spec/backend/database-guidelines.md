@@ -1,51 +1,71 @@
 # Database Guidelines
 
-> Database patterns and conventions for this project.
+> Persistence is a single JSON file. There is **no ORM, no SQL, and no migrations**.
 
 ---
 
 ## Overview
 
-<!--
-Document your project's database conventions here.
+State lives in `data/db.json` (path overridable via `DB_FILE`, used by tests for isolation).
+The shape is fixed:
 
-Questions to answer:
-- What ORM/query library do you use?
-- How are migrations managed?
-- What are the naming conventions for tables/columns?
-- How do you handle transactions?
--->
+```json
+{
+  "images": [ /* newest first */ ],
+  "videos": [ /* newest first */ ],
+  "statistics": { "total": 0, "byModel": {}, "videoTotal": 0, "videoByModel": {} }
+}
+```
 
-(To be filled by the team)
+All access goes through four helpers in the Database Helpers section (`app.js:210`). Do not read
+or write `db.json` directly anywhere else.
 
----
+## Accessors
 
-## Query Patterns
+- `readDb()` (`app.js:212`) — returns the parsed DB, or a fresh empty structure if the file is
+  missing **or unparseable** (it never throws). It also back-fills newer fields (`videos`,
+  `videoTotal`, `videoByModel`) so older DB files keep working. This is the project's substitute
+  for migrations: tolerate old shapes on read.
+- `writeDb(data)` (`app.js:227`) — **atomic**: serializes to `db.json.tmp`, then `rename`s over
+  the target so an interrupted write can never leave a half-written file. Always persist through
+  this; never `fs.writeFileSync(DB_FILE, ...)` directly.
+- `addImageToDb(image)` / `addVideoToDb(video)` (`app.js:235`, `255`) — the **only** way to
+  insert. They `unshift` (newest first), bump the matching statistics counters, then `writeDb`.
+  They wrap everything in try/catch and log on failure rather than throwing, so a persistence
+  error never crashes a request.
 
-<!-- How should queries be written? Batch operations? -->
+## Read-Modify-Write Pattern
 
-(To be filled by the team)
+Mutations (delete, hide/unhide) follow one pattern — read the whole DB, mutate the array in
+memory, write it back:
 
----
+```js
+const db = readDb();
+const image = db.images.find(img => img.id === id);
+if (!image) return res.status(404).json({ error: 'Image not found' });
+image.hidden = true;
+writeDb(db);
+```
 
-## Migrations
+See `app.js:862` (delete) and `app.js:874` (hide) for the canonical shape. Delete uses
+`filter` + length comparison to detect a missing id and return 404.
 
-<!-- How to create and run migrations -->
+## Records
 
-(To be filled by the team)
+- IDs are generated inline as `'<prefix>-' + Date.now() + '-' + Math.random().toString(36).substr(2,9)`
+  (prefixes: `gen-`, `gen-vid-`, `manual-`, `video-t2v-`, `video-i2v-`). Keep the prefix meaningful.
+- Every record carries `timestamp` (ISO string), `hidden: false`, and a `source` (`generated` / `manual`).
+- New fields must be added to the record object **and** back-filled in `readDb()` if list/stats endpoints assume they exist.
 
----
+## Concurrency Caveat
 
-## Naming Conventions
+This is a last-writer-wins store with no locking. Two writes that interleave read-modify-write
+can lose data. That is an accepted tradeoff for a single-user tool — do **not** add a database
+engine to "fix" it without an explicit requirement. If you add a hot write path, keep the
+read-modify-write window as small as possible.
 
-<!-- Table names, column names, index names -->
+## Anti-Patterns
 
-(To be filled by the team)
-
----
-
-## Common Mistakes
-
-<!-- Database-related mistakes your team has made -->
-
-(To be filled by the team)
+- Bypassing `writeDb` / `addImageToDb` / `addVideoToDb` and touching `db.json` directly.
+- Letting `readDb` throw on a corrupt file — it must degrade to an empty DB.
+- Adding a stats counter without updating both the `add*` helper and the back-fill in `readDb`.

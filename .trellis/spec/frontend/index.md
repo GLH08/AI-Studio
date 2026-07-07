@@ -1,39 +1,40 @@
 # Frontend Development Guidelines
 
-> Best practices for frontend development in this project.
+> The frontend is **multi-page vanilla HTML/JS with Tailwind** — no framework, no React, no
+> TypeScript, no client-side router, no build step for the JS.
 
 ---
 
 ## Overview
 
-This directory contains guidelines for frontend development. Fill in each file with your project's specific conventions.
+Three standalone pages, each a self-contained HTML file with one inline `<script>`:
+
+- `index.html` — **Create** (generate image/video) + inline Gallery/Collection/Video tabs.
+- `library.html` — **Gallery / Collection / Video** browser (grid, filters, lightbox).
+- `login.html` — password login.
+
+Pages are served directly by Express (`app.js:185`); navigation between them is plain links via
+the floating capsule nav. There is no shared JS bundle — small helper functions are intentionally
+**duplicated** across pages. Styling is Tailwind compiled to a single committed CSS file.
 
 ---
 
 ## Guidelines Index
 
-| Guide | Description | Status |
-|-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
-| [Component Guidelines](./component-guidelines.md) | Component patterns, props, composition | To fill |
-| [Hook Guidelines](./hook-guidelines.md) | Custom hooks, data fetching patterns | To fill |
-| [State Management](./state-management.md) | Local state, global state, server state | To fill |
-| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
-| [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
+| Guide | Description |
+|-------|-------------|
+| [Directory Structure](./directory-structure.md) | Page files, `assets/`, `src/input.css`, the Tailwind build |
+| [Page & DOM Patterns](./page-and-dom-patterns.md) | Inline script structure, `fetch`, event delegation, template-string rendering, `escapeHtml` |
+| [Styling & Assets](./styling-and-assets.md) | Tailwind workflow, self-hosted assets, inline Lucide SVG, CSP constraints |
+| [Quality Guidelines](./quality-guidelines.md) | XSS/escaping, proxy usage, when to rebuild CSS, review checklist |
 
 ---
 
-## How to Fill These Guidelines
+## Conventions At A Glance
 
-For each guideline file:
+- Vanilla DOM APIs only: `document.querySelector`, `addEventListener`, `classList`, `fetch`.
+- `data-*` attributes drive behavior (`data-tab`, `data-mode`, `data-filter`, `data-action`, `data-id`).
+- All markup is dark-theme liquid-glass; `<html data-theme="dark">`.
+- After editing any HTML class, run `npm run build` and commit `assets/tailwind.css`.
 
-1. Document your project's **actual conventions** (not ideals)
-2. Include **code examples** from your codebase
-3. List **forbidden patterns** and why
-4. Add **common mistakes** your team has made
-
-The goal is to help AI assistants and new team members understand how YOUR project works.
-
----
-
-**Language**: All documentation should be written in **English**.
+**Language**: All documentation is written in **English**.
