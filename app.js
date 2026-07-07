@@ -1,6 +1,5 @@
 import express from 'express';
 import fetch from 'node-fetch';
-import cors from 'cors';
 import bodyParser from 'body-parser';
 import FormData from 'form-data';
 import fs from 'fs';
@@ -47,15 +46,74 @@ const IMAGE_PROXY_WHITELIST = (process.env.IMAGE_PROXY_WHITELIST || '').split(',
 // Video proxy uses same whitelist as image proxy
 const VIDEO_PROXY_WHITELIST = IMAGE_PROXY_WHITELIST;
 
-// Helper: validate URL against whitelist (returns true if allowed, false if blocked)
+// Helper: does a hostname point at a private / loopback / link-local target?
+// Used to block SSRF to internal services (cloud metadata, localhost, LAN) even
+// when no whitelist is configured. Matches on IP literals; a DNS name that
+// resolves to a private IP is out of scope here (redirect re-validation and an
+// explicit whitelist are the other layers).
+function isPrivateHost(hostname) {
+    let h = (hostname || '').toLowerCase();
+    if (h.startsWith('[') && h.endsWith(']')) h = h.slice(1, -1); // strip IPv6 brackets
+    if (h === 'localhost' || h.endsWith('.localhost')) return true;
+    // IPv4-mapped IPv6 (::ffff:127.0.0.1) — recurse on the embedded v4 literal
+    const mapped = h.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+    if (mapped) return isPrivateHost(mapped[1]);
+    // IPv6 loopback / unspecified / link-local (fe80::/10) / unique-local (fc00::/7)
+    if (h === '::1' || h === '::') return true;
+    if (h.startsWith('fe8') || h.startsWith('fe9') || h.startsWith('fea') || h.startsWith('feb')) return true;
+    if (h.startsWith('fc') || h.startsWith('fd')) return true;
+    // IPv4 literals
+    const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if (m) {
+        const a = Number(m[1]), b = Number(m[2]);
+        if (a === 0 || a === 127 || a === 10) return true;        // this-host, loopback, private
+        if (a === 169 && b === 254) return true;                  // link-local (cloud metadata)
+        if (a === 172 && b >= 16 && b <= 31) return true;         // private
+        if (a === 192 && b === 168) return true;                  // private
+    }
+    return false;
+}
+
+// Helper: validate URL against whitelist (returns true if allowed, false if blocked).
+// An explicit whitelist entry always wins (lets an operator opt a private host
+// back in). With an empty whitelist, everything is allowed EXCEPT private /
+// loopback / link-local targets, which are always blocked.
 function isUrlAllowed(urlString, whitelist) {
-    if (whitelist.length === 0) return true; // Empty whitelist means allow all
+    let parsed;
     try {
-        const parsed = new URL(urlString);
-        return whitelist.includes(parsed.hostname);
+        parsed = new URL(urlString);
     } catch {
         return false;
     }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    if (whitelist.length > 0) return whitelist.includes(parsed.hostname);
+    return !isPrivateHost(parsed.hostname);
+}
+
+// Fetch that enforces the SSRF policy on every hop: redirects are followed
+// manually so each new target is re-checked against isUrlAllowed. Throws an
+// error tagged `code: 'SSRF_BLOCKED'` when a target (initial or redirected) is
+// not allowed, so callers can map it to 403.
+async function safeFetch(urlString, whitelist, options = {}) {
+    const MAX_HOPS = 5;
+    let current = urlString;
+    for (let hop = 0; hop <= MAX_HOPS; hop++) {
+        if (!isUrlAllowed(current, whitelist)) {
+            const err = new Error(`Blocked by SSRF policy: ${current}`);
+            err.code = 'SSRF_BLOCKED';
+            throw err;
+        }
+        const res = await fetch(current, { ...options, redirect: 'manual' });
+        const location = res.headers.get('location');
+        if (res.status >= 300 && res.status < 400 && location) {
+            current = new URL(location, current).toString();
+            continue;
+        }
+        return res;
+    }
+    const err = new Error('Too many redirects');
+    err.code = 'SSRF_BLOCKED';
+    throw err;
 }
 
 // Image MIME types constant
@@ -131,7 +189,6 @@ app.use(helmet({
     },
     crossOriginEmbedderPolicy: false
 }));
-app.use(cors());
 app.use(compression());
 app.use(morgan('combined'));
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -140,8 +197,8 @@ app.use(cookieParser());
 
 // Rate Limiting
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: process.env.RATE_LIMIT_MAX_REQUESTS || 500,
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000,
+    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) || 500,
     message: { error: 'Too many requests from this IP, please try again later.' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -209,19 +266,44 @@ app.post('/api/login', loginLimiter, (req, res) => {
 
 // ==================== Database Helpers ====================
 
+// In-memory cache of the DB. Loaded once on first access; every writeDb keeps it
+// in lock-step with disk (write-through). Reads serve from memory so list/stats/
+// mutation endpoints never re-parse the whole file per request.
+let dbCache = null;
+
+function emptyDb() {
+    return { images: [], videos: [], statistics: { total: 0, byModel: {}, videoTotal: 0, videoByModel: {} } };
+}
+
+// Parse + normalize the on-disk DB. Missing file → fresh empty DB. A corrupt /
+// unreadable existing file THROWS (callers must not silently overwrite real data
+// with an empty DB — that was a data-loss bug). Back-fills newer fields so older
+// DB files keep working, guarding against a missing `statistics` object.
+function loadDb() {
+    if (!fs.existsSync(DB_FILE)) return emptyDb();
+    const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+    if (!Array.isArray(data.images)) data.images = [];
+    if (!Array.isArray(data.videos)) data.videos = [];
+    if (!data.statistics || typeof data.statistics !== 'object') data.statistics = {};
+    const s = data.statistics;
+    if (typeof s.total !== 'number') s.total = data.images.length;
+    if (!s.byModel || typeof s.byModel !== 'object') s.byModel = {};
+    if (typeof s.videoTotal !== 'number') s.videoTotal = data.videos.length;
+    if (!s.videoByModel || typeof s.videoByModel !== 'object') s.videoByModel = {};
+    return data;
+}
+
 function readDb() {
-    if (!fs.existsSync(DB_FILE)) {
-        return { images: [], videos: [], statistics: { total: 0, byModel: {}, videoTotal: 0, videoByModel: {} } };
-    }
+    if (dbCache) return dbCache;
     try {
-        const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-        if (!data.videos) data.videos = [];
-        if (!data.statistics.videoTotal) data.statistics.videoTotal = 0;
-        if (!data.statistics.videoByModel) data.statistics.videoByModel = {};
-        return data;
-    } catch {
-        return { images: [], videos: [], statistics: { total: 0, byModel: {}, videoTotal: 0, videoByModel: {} } };
+        dbCache = loadDb();
+    } catch (error) {
+        // Corrupt/unreadable existing file: fail loud instead of returning an
+        // empty DB that a subsequent write would persist over real records.
+        console.error('❌ Failed to read database (refusing to overwrite existing data):', error.message);
+        throw error;
     }
+    return dbCache;
 }
 
 function writeDb(data) {
@@ -230,6 +312,41 @@ function writeDb(data) {
     const tmp = `${DB_FILE}.tmp`;
     fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
     fs.renameSync(tmp, DB_FILE);
+    dbCache = data; // keep the in-memory cache in lock-step with disk
+}
+
+// Test hook: drop the in-memory cache so the next readDb re-reads from disk.
+function __resetDbCache() {
+    dbCache = null;
+}
+
+// Shared CRUD handler factories for images & videos (identical logic, different
+// collection). `collection` is 'images' or 'videos'; `label` shapes the 404 message.
+function makeDeleteHandler(collection, label) {
+    return (req, res) => {
+        const db = readDb();
+        const arr = db[collection] || [];
+        const before = arr.length;
+        db[collection] = arr.filter(item => item.id !== req.params.id);
+        if (db[collection].length === before) {
+            return res.status(404).json({ error: `${label} not found` });
+        }
+        writeDb(db);
+        res.json({ success: true });
+    };
+}
+
+function makeHideHandler(collection, label, hidden) {
+    return (req, res) => {
+        const db = readDb();
+        const item = (db[collection] || []).find(i => i.id === req.params.id);
+        if (!item) {
+            return res.status(404).json({ error: `${label} not found` });
+        }
+        item.hidden = hidden;
+        writeDb(db);
+        res.json({ success: true });
+    };
 }
 
 function addImageToDb(image) {
@@ -643,14 +760,20 @@ async function uploadToChevereto(fileUrl, isVideo = false, providerApiKey = null
         const response = await fetch(fileUrl, { headers });
         if (!response.ok) throw new Error(`Failed to download file. Status: ${response.status}`);
 
-        // node-fetch v3 deprecated .buffer(); arrayBuffer() -> Node Buffer for form-data
-        const buffer = Buffer.from(await response.arrayBuffer());
-
         const formData = new FormData();
         const filename = isVideo ? 'video.mp4' : 'image.png';
         const mimeType = isVideo ? 'video/mp4' : 'image/png';
-        // form-data needs a Buffer/Stream/string here — a Web Blob throws "source.on is not a function"
-        formData.append('source', buffer, { filename, contentType: mimeType });
+        // Prefer streaming the download straight into the upload (no full-file
+        // buffering) when the source advertises a length form-data can use for
+        // the multipart Content-Length. Fall back to buffering otherwise.
+        // form-data needs a Buffer/Stream/string here — a Web Blob throws "source.on is not a function".
+        const contentLength = Number(response.headers.get('content-length'));
+        if (Number.isFinite(contentLength) && contentLength > 0) {
+            formData.append('source', response.body, { filename, contentType: mimeType, knownLength: contentLength });
+        } else {
+            const buffer = Buffer.from(await response.arrayBuffer());
+            formData.append('source', buffer, { filename, contentType: mimeType });
+        }
         if (albumId) {
             formData.append('album_id', albumId);
         }
@@ -859,41 +982,11 @@ app.post('/api/images/manual', (req, res) => {
     res.json(imageRecord);
 });
 
-app.delete('/api/images/:id', (req, res) => {
-    const { id } = req.params;
-    const db = readDb();
-    const initialLength = db.images.length;
-    db.images = db.images.filter(img => img.id !== id);
-    if (db.images.length === initialLength) {
-        return res.status(404).json({ error: 'Image not found' });
-    }
-    writeDb(db);
-    res.json({ success: true });
-});
+app.delete('/api/images/:id', makeDeleteHandler('images', 'Image'));
 
-app.patch('/api/images/:id/hide', (req, res) => {
-    const { id } = req.params;
-    const db = readDb();
-    const image = db.images.find(img => img.id === id);
-    if (!image) {
-        return res.status(404).json({ error: 'Image not found' });
-    }
-    image.hidden = true;
-    writeDb(db);
-    res.json({ success: true });
-});
+app.patch('/api/images/:id/hide', makeHideHandler('images', 'Image', true));
 
-app.patch('/api/images/:id/unhide', (req, res) => {
-    const { id } = req.params;
-    const db = readDb();
-    const image = db.images.find(img => img.id === id);
-    if (!image) {
-        return res.status(404).json({ error: 'Image not found' });
-    }
-    image.hidden = false;
-    writeDb(db);
-    res.json({ success: true });
-});
+app.patch('/api/images/:id/unhide', makeHideHandler('images', 'Image', false));
 
 // ==================== Video Endpoints ====================
 
@@ -968,6 +1061,10 @@ app.post('/api/videos/image-to-video', (req, res) => {
         return res.status(400).json({ error: 'Invalid source image URL format.' });
     }
 
+    if (!isUrlAllowed(url, IMAGE_PROXY_WHITELIST) || !isUrlAllowed(sourceImageUrl, IMAGE_PROXY_WHITELIST)) {
+        return res.status(403).json({ error: 'Domain not allowed. Please use a whitelisted domain.' });
+    }
+
     const id = 'video-i2v-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 
     const videoRecord = {
@@ -987,50 +1084,11 @@ app.post('/api/videos/image-to-video', (req, res) => {
     res.json(videoRecord);
 });
 
-app.delete('/api/videos/:id', (req, res) => {
-    const { id } = req.params;
-    const db = readDb();
-    if (!db.videos) {
-        return res.status(404).json({ error: 'Video not found' });
-    }
-    const initialLength = db.videos.length;
-    db.videos = db.videos.filter(v => v.id !== id);
-    if (db.videos.length === initialLength) {
-        return res.status(404).json({ error: 'Video not found' });
-    }
-    writeDb(db);
-    res.json({ success: true });
-});
+app.delete('/api/videos/:id', makeDeleteHandler('videos', 'Video'));
 
-app.patch('/api/videos/:id/hide', (req, res) => {
-    const { id } = req.params;
-    const db = readDb();
-    if (!db.videos) {
-        return res.status(404).json({ error: 'Video not found' });
-    }
-    const video = db.videos.find(v => v.id === id);
-    if (!video) {
-        return res.status(404).json({ error: 'Video not found' });
-    }
-    video.hidden = true;
-    writeDb(db);
-    res.json({ success: true });
-});
+app.patch('/api/videos/:id/hide', makeHideHandler('videos', 'Video', true));
 
-app.patch('/api/videos/:id/unhide', (req, res) => {
-    const { id } = req.params;
-    const db = readDb();
-    if (!db.videos) {
-        return res.status(404).json({ error: 'Video not found' });
-    }
-    const video = db.videos.find(v => v.id === id);
-    if (!video) {
-        return res.status(404).json({ error: 'Video not found' });
-    }
-    video.hidden = false;
-    writeDb(db);
-    res.json({ success: true });
-});
+app.patch('/api/videos/:id/unhide', makeHideHandler('videos', 'Video', false));
 
 // ==================== Video Proxy (CORS Fix + Caching) ====================
 
@@ -1084,6 +1142,60 @@ function getImageCachePath(imageUrl) {
     return path.join(IMAGE_CACHE_DIR, `${hash}${ext}`);
 }
 
+// Coalesced, SSRF-safe download-to-cache. Concurrent requests for the same cache
+// path share one in-flight download; the file only appears (atomic tmp→rename)
+// once fully written, so a cache hit is always a complete file — never a
+// truncated one left by an aborted/errored stream. Throws on SSRF block
+// (code 'SSRF_BLOCKED'), timeout (name 'AbortError'), or upstream error (.status).
+const inflightDownloads = new Map();
+
+function ensureCached(url, cachePath, whitelist) {
+    if (fs.existsSync(cachePath)) return Promise.resolve();
+    if (inflightDownloads.has(cachePath)) return inflightDownloads.get(cachePath);
+
+    const task = (async () => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 30000); // 30s timeout
+        const tmp = `${cachePath}.tmp`;
+        try {
+            const response = await safeFetch(url, whitelist, { signal: controller.signal });
+            if (!response.ok) {
+                const err = new Error(`Upstream responded ${response.status}`);
+                err.status = response.status;
+                throw err;
+            }
+            await new Promise((resolve, reject) => {
+                const ws = fs.createWriteStream(tmp);
+                response.body.on('error', reject);
+                ws.on('error', reject);
+                ws.on('finish', resolve);
+                response.body.pipe(ws);
+            });
+            fs.renameSync(tmp, cachePath); // atomic — a cache hit is always complete
+            console.log(`[Proxy] Cached: ${cachePath}`);
+        } catch (error) {
+            if (fs.existsSync(tmp)) {
+                try { fs.unlinkSync(tmp); } catch { /* best-effort cleanup */ }
+            }
+            throw error;
+        } finally {
+            clearTimeout(timer);
+        }
+    })();
+
+    inflightDownloads.set(cachePath, task);
+    return task.finally(() => inflightDownloads.delete(cachePath));
+}
+
+// Map a proxy fetch failure to the right HTTP status.
+function sendProxyError(res, error, kind) {
+    if (error.code === 'SSRF_BLOCKED') return res.status(403).json({ error: 'Domain not allowed' });
+    if (error.name === 'AbortError') return res.status(504).json({ error: 'Fetch timeout' });
+    if (error.status) return res.status(error.status).json({ error: `Failed to fetch ${kind}` });
+    console.error(`[Proxy] ${kind} fetch error:`, error.message);
+    return res.status(500).json({ error: error.message });
+}
+
 app.get('/api/proxy/video', async (req, res) => {
     const { url } = req.query;
     if (!url) {
@@ -1106,68 +1218,20 @@ app.get('/api/proxy/video', async (req, res) => {
 
     const cachePath = getCachePath(url);
 
-    // Check if video is already cached locally
-    if (fs.existsSync(cachePath)) {
-        console.log(`[Proxy] Serving from cache: ${cachePath}`);
-        const stat = fs.statSync(cachePath);
-        res.setHeader('Content-Type', 'video/mp4');
-        res.setHeader('Content-Length', stat.size);
-        res.setHeader('Accept-Ranges', 'bytes');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        fs.createReadStream(cachePath).pipe(res);
-        return;
-    }
-
-    // Fetch from remote and cache simultaneously with timeout
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
-
+    // Download to cache (coalesced + SSRF-safe redirects) if not already present,
+    // then serve the complete file. safeFetch inside re-validates every redirect.
     try {
-        console.log(`[Proxy] Fetching and caching video: ${url}`);
-
-        const videoResponse = await fetch(url, { signal: controller.signal });
-
-        clearTimeout(timeout);
-
-        if (!videoResponse.ok) {
-            return res.status(videoResponse.status).json({ error: 'Failed to fetch video' });
-        }
-
-        // Stream to client AND save to cache
-        res.setHeader('Content-Type', 'video/mp4');
-        res.setHeader('Content-Length', videoResponse.headers.get('content-length') || '');
-        res.setHeader('Accept-Ranges', 'bytes');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-
-        // Pipe to both response and file system
-        const fileWriteStream = fs.createWriteStream(cachePath);
-        videoResponse.body.pipe(res);
-        videoResponse.body.pipe(fileWriteStream);
-
-        videoResponse.body.on('end', () => {
-            console.log(`[Proxy] Video cached: ${cachePath}`);
-        });
-
-        videoResponse.body.on('error', (err) => {
-            console.error('[Proxy] Cache write error:', err);
-            // Clean up partial file
-            if (fs.existsSync(cachePath)) {
-                fs.unlinkSync(cachePath);
-            }
-        });
-
+        await ensureCached(url, cachePath, VIDEO_PROXY_WHITELIST);
     } catch (error) {
-        clearTimeout(timeout);
-        if (error.name === 'AbortError') {
-            console.error(`[Proxy] Video fetch timeout: ${url}`);
-            return res.status(504).json({ error: 'Fetch timeout' });
-        }
-        console.error('[Proxy] Video fetch error:', error.message);
-        if (fs.existsSync(cachePath)) {
-            fs.unlinkSync(cachePath);
-        }
-        res.status(500).json({ error: error.message });
+        return sendProxyError(res, error, 'video');
     }
+
+    const stat = fs.statSync(cachePath);
+    res.setHeader('Content-Type', 'video/mp4');
+    res.setHeader('Content-Length', stat.size);
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    fs.createReadStream(cachePath).pipe(res);
 });
 
 // ==================== Image Proxy (CORS Fix + Caching) ====================
@@ -1220,70 +1284,21 @@ app.get('/api/proxy/image', async (req, res) => {
 
     const cachePath = getImageCachePath(url);
 
-    // Check if image is already cached locally
-    if (fs.existsSync(cachePath)) {
-        console.log(`[Proxy] Serving image from cache: ${cachePath}`);
-        const stat = fs.statSync(cachePath);
-        const ext = path.extname(cachePath).toLowerCase();
-        res.setHeader('Content-Type', IMAGE_MIME_TYPES[ext] || 'image/jpeg');
-        res.setHeader('Content-Length', stat.size);
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        fs.createReadStream(cachePath).pipe(res);
-        return;
-    }
-
-    // Fetch from remote and cache (streaming to avoid memory issues)
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
-
+    // Download to cache (coalesced + SSRF-safe redirects) if not already present,
+    // then serve the complete file.
     try {
-        console.log(`[Proxy] Fetching and caching image: ${url}`);
-
-        const imageResponse = await fetch(url, { signal: controller.signal });
-
-        clearTimeout(timeout);
-
-        if (!imageResponse.ok) {
-            return res.status(imageResponse.status).json({ error: 'Failed to fetch image' });
-        }
-
-        const ext = path.extname(parsedUrl.pathname) || '.jpg';
-        const contentLength = imageResponse.headers.get('content-length');
-
-        res.setHeader('Content-Type', IMAGE_MIME_TYPES[ext] || 'image/jpeg');
-        if (contentLength) res.setHeader('Content-Length', contentLength);
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-
-        // Stream to both response and file system
-        const fileWriteStream = fs.createWriteStream(cachePath);
-        imageResponse.body.pipe(res);
-        imageResponse.body.pipe(fileWriteStream);
-
-        imageResponse.body.on('end', () => {
-            console.log(`[Proxy] Image cached: ${cachePath}`);
-        });
-
-        imageResponse.body.on('error', (err) => {
-            console.error('[Proxy] Cache write error:', err.message);
-            if (fs.existsSync(cachePath)) {
-                fs.unlinkSync(cachePath);
-            }
-        });
-
+        await ensureCached(url, cachePath, IMAGE_PROXY_WHITELIST);
     } catch (error) {
-        clearTimeout(timeout);
-        if (error.name === 'AbortError') {
-            console.error(`[Proxy] Image fetch timeout: ${url}`);
-            return res.status(504).json({ error: 'Fetch timeout' });
-        }
-        console.error('[Proxy] Image fetch error:', error.message);
-        if (fs.existsSync(cachePath)) {
-            fs.unlinkSync(cachePath);
-        }
-        res.status(500).json({ error: error.message });
+        return sendProxyError(res, error, 'image');
     }
+
+    const stat = fs.statSync(cachePath);
+    const ext = path.extname(cachePath).toLowerCase();
+    res.setHeader('Content-Type', IMAGE_MIME_TYPES[ext] || 'image/jpeg');
+    res.setHeader('Content-Length', stat.size);
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    fs.createReadStream(cachePath).pipe(res);
 });
 
 // ==================== Server Startup ====================
@@ -1333,5 +1348,7 @@ export {
     addVideoToDb,
     loadProviders,
     parseModels,
-    isUrlAllowed
+    isUrlAllowed,
+    isPrivateHost,
+    __resetDbCache
 };

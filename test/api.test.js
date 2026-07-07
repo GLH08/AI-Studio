@@ -209,6 +209,32 @@ describe('GET /api/images pagination', () => {
     });
 });
 
+describe('POST /api/videos/image-to-video SSRF validation', () => {
+    it('rejects a non-whitelisted video url (403)', async () => {
+        const res = await fetch(`${base}/api/videos/image-to-video`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: 'https://evil.com/v.mp4', sourceImageUrl: 'https://allowed.example.com/s.jpg', prompt: 'p', model: 'm' })
+        });
+        assert.strictEqual(res.status, 403);
+    });
+
+    it('rejects a non-whitelisted source image url (403)', async () => {
+        const res = await fetch(`${base}/api/videos/image-to-video`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: 'https://allowed.example.com/v.mp4', sourceImageUrl: 'https://evil.com/s.jpg', prompt: 'p', model: 'm' })
+        });
+        assert.strictEqual(res.status, 403);
+    });
+
+    it('accepts whitelisted urls (200)', async () => {
+        const res = await fetch(`${base}/api/videos/image-to-video`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: 'https://allowed.example.com/v.mp4', sourceImageUrl: 'https://allowed.example.com/s.jpg', prompt: 'p', model: 'm' })
+        });
+        assert.strictEqual(res.status, 200);
+    });
+});
+
 describe('Removed /api/upload endpoint', () => {
     it('returns 404 (endpoint removed)', async () => {
         const res = await fetch(`${base}/api/upload`, {

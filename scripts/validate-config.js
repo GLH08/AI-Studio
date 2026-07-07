@@ -75,6 +75,26 @@ if (majorVersion < 18) {
     console.log(`✅ Node.js version is supported: ${nodeVersion}`);
 }
 
+// Warn about deprecated / ignored variables that no longer do anything (were in
+// older .env.example but are not read by app.js). Silently leaving them set is
+// misleading, so surface them.
+const DEPRECATED_VARS = [
+    'MAX_REQUEST_SIZE', 'REQUEST_TIMEOUT', 'MAX_BULK_REQUESTS',
+    'RATE_LIMIT_ENABLED', 'LOG_LEVEL', 'LOG_REQUESTS'
+];
+for (const key of DEPRECATED_VARS) {
+    if (process.env[key] !== undefined) {
+        warnings.push(`⚠️  ${key} is set but no longer used by the app — safe to remove from your .env`);
+    }
+}
+
+// Surface the SSRF allow-list posture (empty = all public hosts allowed).
+if (process.env.IMAGE_PROXY_WHITELIST && process.env.IMAGE_PROXY_WHITELIST.trim()) {
+    console.log(`✅ IMAGE_PROXY_WHITELIST restricts proxying to: ${process.env.IMAGE_PROXY_WHITELIST}`);
+} else {
+    warnings.push('⚠️  IMAGE_PROXY_WHITELIST is empty — proxies allow all public hosts (private/loopback IPs are still blocked). Set it in production.');
+}
+
 // Summary
 console.log('\n' + '='.repeat(50));
 if (errors.length > 0) {
